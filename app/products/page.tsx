@@ -3,16 +3,25 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
-import { products, categories, brands } from "@/lib/products";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import ProductCardSkeleton from "@/components/ProductCardSkeleton";
+import { getProducts, getCategoryCounts, getBrandCounts, toProduct, MappedProduct } from "@/lib/db";
+import { Search, SlidersHorizontal, X, AlertCircle } from "lucide-react";
 
 function ProductsContent() {
   const searchParams = useSearchParams();
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [activeBrand, setActiveBrand]       = useState("All");
-  const [search, setSearch]                 = useState("");
-  const [showFilters, setShowFilters]       = useState(false);
 
+  const [allProducts, setAllProducts]       = useState<MappedProduct[]>([]);
+  const [categories,  setCategories]        = useState<string[]>([]);
+  const [brands,      setBrands]            = useState<string[]>([]);
+  const [loading,     setLoading]           = useState(true);
+  const [error,       setError]             = useState<string | null>(null);
+
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeBrand,    setActiveBrand]    = useState("All");
+  const [search,         setSearch]         = useState("");
+  const [showFilters,    setShowFilters]    = useState(false);
+
+  // Init filters from URL params
   useEffect(() => {
     const cat   = searchParams.get("category");
     const brand = searchParams.get("brand");
@@ -20,7 +29,30 @@ function ProductsContent() {
     if (brand) setActiveBrand(brand);
   }, [searchParams]);
 
-  const filtered = products.filter((p) => {
+  // Fetch from Supabase
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      try {
+        const [{ data: rows, error: err }, catCounts, brandCounts] = await Promise.all([
+          getProducts(),
+          getCategoryCounts(),
+          getBrandCounts(),
+        ]);
+        if (err) { setError(err); return; }
+        setAllProducts(rows.map(toProduct));
+        setCategories(catCounts.map((c) => c.category));
+        setBrands(brandCounts.map((b) => b.brand));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load products");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const filtered = allProducts.filter((p) => {
     const matchCat    = activeCategory === "All" || p.category === activeCategory;
     const matchBrand  = activeBrand    === "All" || p.brand    === activeBrand;
     const q = search.toLowerCase();
@@ -43,11 +75,21 @@ function ProductsContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-2xl font-bold text-[#111111]">Product Catalog</h1>
           <p className="text-gray-400 text-sm mt-0.5" dir="rtl">كتالوج المنتجات</p>
-          <p className="text-gray-500 text-sm mt-1">{filtered.length} of {products.length} products · Credit pricing (ex-VAT)</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {loading ? "Loading…" : `${filtered.length} of ${allProducts.length} products`} · Credit pricing (ex-VAT)
+          </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Error state */}
+        {error && (
+          <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-6 text-sm">
+            <AlertCircle size={16} className="flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Search + filter toggle */}
         <div className="flex gap-2 mb-4">
           <div className="relative flex-1">
@@ -83,7 +125,6 @@ function ProductsContent() {
         {/* Expandable filter panel */}
         {showFilters && (
           <div className="bg-[#F7F7F5] border border-gray-200 rounded-xl p-5 mb-6 space-y-4">
-            {/* Brand filter */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2.5">Brand</p>
               <div className="flex flex-wrap gap-2">
@@ -103,7 +144,6 @@ function ProductsContent() {
               </div>
             </div>
 
-            {/* Category filter */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2.5">Category</p>
               <div className="flex flex-wrap gap-2">
@@ -143,14 +183,30 @@ function ProductsContent() {
           </div>
         )}
 
-        {/* Grid */}
-        {filtered.length === 0 ? (
+        {/* Loading skeleton grid */}
+        {loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && !error && filtered.length === 0 && (
           <div className="text-center py-24 text-gray-400">
             <p className="text-lg font-semibold text-gray-600">No products found</p>
             <p className="text-sm mt-1">Try adjusting your filters or search term.</p>
-            <button onClick={clearAll} className="mt-4 text-sm text-[#1B4D2E] font-medium hover:underline">Clear all filters</button>
+            {hasActiveFilters && (
+              <button onClick={clearAll} className="mt-4 text-sm text-[#1B4D2E] font-medium hover:underline">
+                Clear all filters
+              </button>
+            )}
           </div>
-        ) : (
+        )}
+
+        {/* Product grid */}
+        {!loading && filtered.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((p) => (
               <ProductCard key={p.id} product={p} />
@@ -164,7 +220,21 @@ function ProductsContent() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-gray-400">Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-white">
+        <div className="bg-[#F7F7F5] border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="h-7 w-40 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}
+          </div>
+        </div>
+      </div>
+    }>
       <ProductsContent />
     </Suspense>
   );

@@ -2,17 +2,17 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { Product } from "@/lib/products";
+import { CartProduct } from "@/lib/cartStore";
 
 interface ProductImageProps {
-  product: Product;
+  product: CartProduct;
   fill?: boolean;
   className?: string;
   sizes?: string;
 }
 
 // Try each src in order — first one that loads wins
-function buildSrcList(product: Product): string[] {
+function buildSrcList(product: CartProduct): string[] {
   const id = product.id;
   const brand = product.brand;
   return [

@@ -1,67 +1,57 @@
 /**
- * Seed the Supabase products table from the local products catalog.
+ * Seed the Supabase `products` table from lib/products.ts.
  *
- * Usage:
- *   npx tsx scripts/seed-products.ts
+ * Run AFTER executing supabase/products-schema.sql in the SQL editor.
  *
- * Requires SUPABASE_SERVICE_KEY in .env.local for admin access (bypasses RLS).
- * OR relies on the permissive INSERT policy created in schema.sql.
+ *   npm run seed
+ *
+ * Uses --env-file so no dotenv import needed.
  */
-
 import { createClient } from "@supabase/supabase-js";
 import { products } from "../lib/products";
-import * as dotenv from "dotenv";
-import * as path from "path";
 
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const key = process.env.SUPABASE_SERVICE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!url || !key) {
-  console.error("Missing NEXT_PUBLIC_SUPABASE_URL or key in .env.local");
+  console.error("Missing NEXT_PUBLIC_SUPABASE_URL or key. Check .env.local");
   process.exit(1);
 }
 
 const supabase = createClient(url, key);
 
 const rows = products.map((p) => ({
-  sku:           p.id,
-  name_ar:       p.nameAr,
-  name_en:       p.nameEn,
-  brand:         p.brand,
-  category:      p.category,
-  unit_price:    p.pricePerPiece,
-  pack_size:     `${p.caseCount} pcs/case`,
-  min_order_qty: 1,
-  stock_quantity: 9999,
-  image_url:     null,
-  is_active:     true,
+  id:        parseInt(p.id, 10),
+  name_en:   p.nameEn,
+  name_ar:   p.nameAr,
+  brand:     p.brand,
+  category:  p.category,
+  price:     p.pricePerPiece,
+  pack_size: `Case of ${p.caseCount} pcs`,
+  image_url: null,          // ProductImage component handles fallback chain
+  is_active: true,
+  stock:     999,
 }));
 
 async function seed() {
-  console.log(`Seeding ${rows.length} products into Supabase…`);
+  console.log(`Seeding ${rows.length} products…`);
 
   // Upsert in batches of 50
   const BATCH = 50;
-  let total = 0;
+  let done = 0;
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i + BATCH);
-    const { error, count } = await supabase
-      .from("products")
-      .upsert(batch, { onConflict: "sku" });
-
+    const { error } = await supabase.from("products").upsert(batch, { onConflict: "id" });
     if (error) {
-      console.error(`Batch ${i}–${i + batch.length} FAILED:`, error.message);
+      console.error(`  ✗ batch ${i}–${i + batch.length}:`, error.message);
     } else {
-      total += batch.length;
-      console.log(`  ✓ ${total}/${rows.length}`);
+      done += batch.length;
+      console.log(`  ✓ ${done}/${rows.length}`);
     }
   }
 
-  console.log("\nDone. Verifying count…");
   const { count } = await supabase.from("products").select("*", { count: "exact", head: true });
-  console.log(`Products in Supabase: ${count}`);
+  console.log(`\nDone. Products in Supabase: ${count}`);
 }
 
 seed().catch(console.error);

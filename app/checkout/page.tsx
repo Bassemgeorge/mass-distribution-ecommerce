@@ -1,43 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useCart } from "@/lib/cartStore";
 import { supabase } from "@/lib/supabase";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Lock, ShoppingBag, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Loader2 } from "lucide-react";
 
 type FormState = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
   businessName: string;
+  contactName: string;
+  phone: string;
   address: string;
   area: string;
-  customerType: string;
+  paymentMethod: string;
   notes: string;
 };
 
+const AREAS = ["Cairo", "Giza", "Alexandria", "New Cairo", "Sheikh Zayed", "6th of October", "Sharm El Sheikh", "Hurghada", "Mansoura", "Other"];
+
 const emptyForm: FormState = {
-  firstName: "", lastName: "", email: "", phone: "",
-  businessName: "", address: "", area: "Cairo", customerType: "restaurant", notes: "",
+  businessName: "", contactName: "", phone: "",
+  address: "", area: "Cairo", paymentMethod: "cash", notes: "",
 };
 
-const AREAS = ["Cairo","Giza","Alexandria","New Cairo","Sheikh Zayed","6th of October","Sharm El Sheikh","Hurghada","Mansoura","Other"];
-
-export default function CheckoutPage() {
+function CheckoutContent() {
   const { items, total, count, clear } = useCart();
-  const [form, setForm]       = useState<FormState>(emptyForm);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [form, setForm]       = useState<FormState>({ ...emptyForm, notes: searchParams.get("notes") ?? "" });
   const [loading, setLoading] = useState(false);
-  const [orderNum, setOrderNum] = useState<string | null>(null);
   const [error, setError]     = useState<string | null>(null);
 
-  function update(field: keyof FormState, value: string) {
+  function set(field: keyof FormState, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
   async function submitOrder() {
-    if (!form.firstName || !form.phone || !form.businessName || !form.address) {
+    if (!form.businessName || !form.contactName || !form.phone || !form.address) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -45,45 +46,38 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // 1 — upsert customer
+      // 1 — insert customer
       const { data: customer, error: custErr } = await supabase
         .from("customers")
-        .upsert(
-          {
-            business_name: form.businessName,
-            contact_name: `${form.firstName} ${form.lastName}`.trim(),
-            phone: form.phone,
-            email: form.email || null,
-            address: form.address,
-            area: form.area,
-            customer_type: form.customerType,
-          },
-          { onConflict: "email", ignoreDuplicates: false }
-        )
+        .insert({
+          name:          form.contactName,
+          business_name: form.businessName,
+          phone:         form.phone,
+          address:       `${form.address}, ${form.area}`,
+        })
         .select("id")
         .single();
 
       if (custErr) throw new Error(custErr.message);
 
-      // 2 — create order
+      // 2 — insert order
       const { data: order, error: orderErr } = await supabase
         .from("orders")
         .insert({
-          customer_id:      customer.id,
-          status:           "pending",
-          total_amount:     total,
-          delivery_address: `${form.address}, ${form.area}`,
-          notes:            form.notes || null,
+          customer_id: customer.id,
+          status:      "pending",
+          total:       total,
+          notes:       [form.notes, `Payment: ${form.paymentMethod}`].filter(Boolean).join(" | ") || null,
         })
-        .select("id, order_number")
+        .select("id")
         .single();
 
       if (orderErr) throw new Error(orderErr.message);
 
-      // 3 — create order items
+      // 3 — insert order items
       const itemRows = items.map(({ product, quantity }) => ({
         order_id:     order.id,
-        product_sku:  product.id,
+        product_id:   parseInt(product.id, 10),
         product_name: product.nameEn,
         quantity,
         unit_price:   product.pricePerPiece,
@@ -93,42 +87,15 @@ export default function CheckoutPage() {
       const { error: itemErr } = await supabase.from("order_items").insert(itemRows);
       if (itemErr) throw new Error(itemErr.message);
 
-      // 4 — success
-      setOrderNum(order.order_number);
+      // 4 — clear cart and redirect
       clear();
+      router.push(`/order-confirmation/${order.id}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-    } finally {
       setLoading(false);
     }
   }
 
-  // ── Success screen ────────────────────────────────────────────────────────
-  if (orderNum) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="max-w-md mx-auto px-4 text-center">
-          <div className="w-16 h-16 bg-[#1B4D2E]/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
-            <CheckCircle size={32} className="text-[#1B4D2E]" />
-          </div>
-          <h1 className="text-2xl font-bold text-[#111111] mb-1">Order Placed!</h1>
-          <p className="text-gray-400 text-sm mb-4" dir="rtl">تم تقديم طلبك بنجاح</p>
-          <div className="bg-[#F7F7F5] rounded-xl p-4 mb-6 border border-gray-200">
-            <p className="text-xs text-gray-400 mb-1">Your Order Number</p>
-            <p className="text-2xl font-bold text-[#1B4D2E] font-mono">{orderNum}</p>
-          </div>
-          <p className="text-gray-500 text-sm mb-8">
-            Our team will contact you shortly to confirm delivery details and timing.
-          </p>
-          <Link href="/products" className="inline-flex items-center gap-2 bg-[#1B4D2E] text-white font-semibold px-6 py-3 rounded-lg hover:bg-[#163d24] transition-colors text-sm">
-            Continue Shopping
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Empty cart ────────────────────────────────────────────────────────────
   if (count === 0) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -146,9 +113,9 @@ export default function CheckoutPage() {
     );
   }
 
-  const inputClass = "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#1B4D2E] transition-colors bg-white";
-  const labelClass = "block text-xs font-medium text-gray-500 mb-1.5";
-  const required   = <span className="text-red-400 ml-0.5">*</span>;
+  const inp = "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#1B4D2E] transition-colors bg-white";
+  const lbl = "block text-xs font-medium text-gray-500 mb-1.5";
+  const req = <span className="text-red-400 ml-0.5">*</span>;
 
   return (
     <div className="min-h-screen bg-white">
@@ -164,33 +131,27 @@ export default function CheckoutPage() {
         <h1 className="text-2xl font-bold text-[#111111] mb-8">Checkout</h1>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
-            {error}
-          </div>
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-          {/* ── Form ────────────────────────────────────────────────────── */}
+          {/* ── Form ─────────────────────────────────────────────────────── */}
           <div className="lg:col-span-3 space-y-8">
-            {/* Contact */}
+            {/* Business & Contact */}
             <section>
-              <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">Contact Information</h2>
+              <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">Business Details</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>First Name {required}</label>
-                  <input type="text" value={form.firstName} onChange={(e) => update("firstName", e.target.value)} className={inputClass} placeholder="Ahmed" />
-                </div>
-                <div>
-                  <label className={labelClass}>Last Name</label>
-                  <input type="text" value={form.lastName} onChange={(e) => update("lastName", e.target.value)} className={inputClass} placeholder="Hassan" />
+                <div className="sm:col-span-2">
+                  <label className={lbl}>Business / Outlet Name {req}</label>
+                  <input type="text" value={form.businessName} onChange={(e) => set("businessName", e.target.value)} className={inp} placeholder="Cairo Marriott Hotel" />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className={labelClass}>Email</label>
-                  <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className={inputClass} placeholder="ahmed@restaurant.eg" />
+                  <label className={lbl}>Contact Name {req}</label>
+                  <input type="text" value={form.contactName} onChange={(e) => set("contactName", e.target.value)} className={inp} placeholder="Ahmed Hassan" />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className={labelClass}>Phone {required}</label>
-                  <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} className={inputClass} placeholder="+20 10 xxxx xxxx" />
+                  <label className={lbl}>Phone Number {req}</label>
+                  <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className={inp} placeholder="+20 10 xxxx xxxx" />
                 </div>
               </div>
             </section>
@@ -200,45 +161,45 @@ export default function CheckoutPage() {
               <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">Delivery Details</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
-                  <label className={labelClass}>Business / Outlet Name {required}</label>
-                  <input type="text" value={form.businessName} onChange={(e) => update("businessName", e.target.value)} className={inputClass} placeholder="Cairo Marriott Hotel" />
+                  <label className={lbl}>Street Address {req}</label>
+                  <input type="text" value={form.address} onChange={(e) => set("address", e.target.value)} className={inp} placeholder="16 Nile Corniche, Maadi" />
                 </div>
-                <div>
-                  <label className={labelClass}>Customer Type</label>
-                  <select value={form.customerType} onChange={(e) => update("customerType", e.target.value)} className={inputClass}>
-                    <option value="restaurant">Restaurant</option>
-                    <option value="hotel">Hotel</option>
-                    <option value="cafe">Café</option>
-                    <option value="catering">Catering</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Area</label>
-                  <select value={form.area} onChange={(e) => update("area", e.target.value)} className={inputClass}>
+                <div className="sm:col-span-2">
+                  <label className={lbl}>Area</label>
+                  <select value={form.area} onChange={(e) => set("area", e.target.value)} className={inp}>
                     {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className={labelClass}>Street Address {required}</label>
-                  <input type="text" value={form.address} onChange={(e) => update("address", e.target.value)} className={inputClass} placeholder="16 Nile Corniche, Maadi" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className={labelClass}>Delivery Notes</label>
-                  <textarea rows={2} value={form.notes} onChange={(e) => update("notes", e.target.value)} className={`${inputClass} resize-none`} placeholder="Preferred delivery time, landmark, floor…" />
+                  <label className={lbl}>Delivery Notes</label>
+                  <textarea rows={2} value={form.notes} onChange={(e) => set("notes", e.target.value)} className={`${inp} resize-none`} placeholder="Preferred delivery time, landmark, floor…" />
                 </div>
               </div>
             </section>
 
-            {/* Payment info */}
+            {/* Payment method */}
             <section>
-              <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">Payment</h2>
-              <div className="bg-[#F7F7F5] border border-gray-200 rounded-xl p-4 flex items-center gap-3 text-gray-500 text-sm">
-                <Lock size={16} className="flex-shrink-0 text-[#1B4D2E]" />
-                <div>
-                  <p className="font-medium text-gray-700">Invoice on delivery</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Credit account customers receive an invoice with order. Cash customers pay on delivery.</p>
-                </div>
+              <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">Payment Method</h2>
+              <div className="space-y-2">
+                {[
+                  { value: "cash",     label: "Cash on Delivery",  desc: "Pay in cash when your order arrives." },
+                  { value: "transfer", label: "Bank Transfer",     desc: "We'll send bank details after confirming your order." },
+                ].map(({ value, label, desc }) => (
+                  <label key={value} className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${form.paymentMethod === value ? "border-[#1B4D2E] bg-[#1B4D2E]/5" : "border-gray-200 hover:border-gray-300"}`}>
+                    <input
+                      type="radio"
+                      name="payment"
+                      value={value}
+                      checked={form.paymentMethod === value}
+                      onChange={() => set("paymentMethod", value)}
+                      className="mt-0.5 accent-[#1B4D2E]"
+                    />
+                    <div>
+                      <p className="text-sm font-semibold text-[#111111]">{label}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                    </div>
+                  </label>
+                ))}
               </div>
             </section>
 
@@ -247,18 +208,12 @@ export default function CheckoutPage() {
               disabled={loading}
               className="w-full bg-[#1B4D2E] text-white font-semibold py-3.5 rounded-lg hover:bg-[#163d24] transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? (
-                <><Loader2 size={16} className="animate-spin" /> Placing Order…</>
-              ) : (
-                "Place Order"
-              )}
+              {loading ? <><Loader2 size={16} className="animate-spin" /> Placing Order…</> : "Place Order"}
             </button>
-            <p className="text-xs text-gray-400 text-center -mt-4">
-              By placing this order you agree to our terms of service.
-            </p>
+            <p className="text-xs text-gray-400 text-center -mt-4">By placing this order you agree to our terms of service.</p>
           </div>
 
-          {/* ── Order summary ───────────────────────────────────────────── */}
+          {/* ── Order summary ─────────────────────────────────────────────── */}
           <div className="lg:col-span-2">
             <div className="bg-[#F7F7F5] rounded-xl p-5 border border-gray-200 sticky top-24">
               <h2 className="text-sm font-bold text-[#111111] uppercase tracking-wider mb-4">Order Summary</h2>
@@ -287,11 +242,18 @@ export default function CheckoutPage() {
                   <span>EGP {total.toFixed(2)}</span>
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mt-3">VAT applies to taxable products per Egyptian regulations.</p>
             </div>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-gray-400 text-sm">Loading…</div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }

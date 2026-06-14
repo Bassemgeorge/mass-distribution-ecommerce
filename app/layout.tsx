@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/lib/cartStore";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Mass Distribution — HORECA Supplies Egypt",
@@ -18,7 +15,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`h-full ${inter.variable}`}>
+    <html lang="en" className="h-full">
       <body className="min-h-full flex flex-col bg-white text-[#111111] font-sans">
         <CartProvider>
           <Navbar />

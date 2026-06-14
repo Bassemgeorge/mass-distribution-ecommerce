@@ -1,21 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useCart } from "@/lib/cartStore";
-import { Product } from "@/lib/products";
-import { ShoppingCart, Check } from "lucide-react";
+import { useCart, CartProduct } from "@/lib/cartStore";
+import { Check, Minus, Plus, ShoppingCart } from "lucide-react";
 import ProductImage from "./ProductImage";
 import { useState } from "react";
 
-export default function ProductCard({ product }: { product: Product }) {
-  const { add } = useCart();
-  const [added, setAdded] = useState(false);
+interface Props {
+  product: CartProduct;
+}
+
+export default function ProductCard({ product }: Props) {
+  const { items, add, update, remove } = useCart();
+  const [justAdded, setJustAdded] = useState(false);
+
+  const cartItem = items.find((i) => i.product.id === product.id);
+  const qty = cartItem?.quantity ?? 0;
 
   function handleAdd(e: React.MouseEvent) {
     e.preventDefault();
     add(product);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1500);
+  }
+
+  function handleInc(e: React.MouseEvent) {
+    e.preventDefault();
+    update(product.id, qty + 1);
+  }
+
+  function handleDec(e: React.MouseEvent) {
+    e.preventDefault();
+    if (qty <= 1) remove(product.id);
+    else update(product.id, qty - 1);
   }
 
   return (
@@ -39,34 +56,52 @@ export default function ProductCard({ product }: { product: Product }) {
       {/* Content */}
       <div className="p-4 flex flex-col flex-1">
         <span className="text-xs text-gray-400 uppercase tracking-wider mb-1">{product.category}</span>
-
         <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-0.5 group-hover:text-[#1B4D2E] transition-colors">
           {product.nameEn}
         </h3>
         <p className="text-xs text-gray-400 mb-1 text-right" dir="rtl">{product.nameAr}</p>
+        <p className="text-xs text-gray-500 mt-1">Case of {product.caseCount} pcs</p>
 
-        <p className="text-xs text-gray-500 mt-1">
-          Case of {product.caseCount} pcs
-        </p>
-
-        <div className="mt-auto pt-4 flex items-center justify-between">
+        <div className="mt-auto pt-4 flex items-center justify-between gap-2">
           <div>
             <p className="text-xs text-gray-400">Per Piece</p>
             <span className="text-base font-bold text-[#111111]">
               EGP {product.pricePerPiece.toFixed(2)}
             </span>
           </div>
-          <button
-            onClick={handleAdd}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
-              added
-                ? "bg-[#1B4D2E] text-white"
-                : "bg-[#111111] text-white hover:bg-[#1B4D2E]"
-            }`}
-          >
-            {added ? <Check size={13} /> : <ShoppingCart size={13} />}
-            {added ? "Added" : "Add"}
-          </button>
+
+          {/* Show quantity controls if item already in cart, else Add button */}
+          {qty > 0 ? (
+            <div className="flex items-center border border-[#1B4D2E] rounded-lg overflow-hidden" onClick={(e) => e.preventDefault()}>
+              <button
+                onClick={handleDec}
+                className="px-2 py-1.5 text-[#1B4D2E] hover:bg-[#1B4D2E] hover:text-white transition-colors"
+              >
+                <Minus size={12} />
+              </button>
+              <span className="px-2.5 py-1.5 text-xs font-bold text-[#1B4D2E] border-x border-[#1B4D2E] min-w-[1.75rem] text-center">
+                {qty}
+              </span>
+              <button
+                onClick={handleInc}
+                className="px-2 py-1.5 text-[#1B4D2E] hover:bg-[#1B4D2E] hover:text-white transition-colors"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleAdd}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                justAdded
+                  ? "bg-[#1B4D2E] text-white"
+                  : "bg-[#111111] text-white hover:bg-[#1B4D2E]"
+              }`}
+            >
+              {justAdded ? <Check size={13} /> : <ShoppingCart size={13} />}
+              {justAdded ? "Added ✓" : "Add"}
+            </button>
+          )}
         </div>
       </div>
     </Link>
