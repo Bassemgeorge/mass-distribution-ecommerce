@@ -7,8 +7,12 @@ import Footer from "@/components/Footer";
 export const metadata: Metadata = {
   title: "Mass Distribution — HORECA Supplies Egypt",
   description:
-    "B2B FMCG distribution for hotels, restaurants, and cafés across Egypt. 237 products from 9 top brands.",
+    "B2B FMCG distribution for hotels, restaurants, and cafés across Egypt. 225 products from top brands.",
   keywords: "HORECA, Egypt, distribution, FMCG, wholesale, Mass Distribution",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
