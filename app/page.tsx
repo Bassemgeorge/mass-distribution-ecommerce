@@ -5,36 +5,39 @@ import { supabase } from "@/lib/supabase";
 import {
   ArrowRight, Package, Search, ShoppingCart, Truck,
   CheckCircle, TrendingUp, Users, Clock, Star,
+  Droplets, Droplet, Utensils, FlaskConical, GlassWater,
+  Coffee, Wheat, Leaf, Sparkles, TestTube, Salad, Vegan,
+  Bean, Waves, Zap, Beer, Container,
 } from "lucide-react";
 
 // Always fetch fresh from Supabase — don't statically generate
 export const dynamic = "force-dynamic";
 
-const categoryEmoji: Record<string, string> = {
-  "Cooking Oil":     "🫙",
-  "Olive Oil":       "🫒",
-  "Pasta":           "🍝",
-  "Tomato Paste":    "🍅",
-  "Sauces":          "🥫",
-  "Milk":            "🥛",
-  "Soft Drinks":     "🧃",
-  "Rice":            "🌾",
-  "Seasonings":      "🌿",
-  "Coffee":          "☕",
-  "Sugar":           "🍬",
-  "Vinegar":         "🍶",
-  "Olives":          "🫒",
-  "Pickles":         "🥒",
-  "Beans":           "🫘",
-  "Water":           "💧",
-  "Tonic Water":     "🫧",
-  "BIB Syrup":       "🍯",
-  "Energy Drinks":   "⚡",
-  "Ketchup":         "🍅",
-  "Malt Beverages":  "🍺",
-  "Speciality":      "⭐",
-  "Beverages":       "🧃",
-  "Syrup":           "🍯",
+const categoryIcons: Record<string, React.ElementType> = {
+  "Cooking Oil":    Droplets,
+  "Olive Oil":      Droplet,
+  "Pasta":          Utensils,
+  "Tomato Paste":   FlaskConical,
+  "Sauces":         FlaskConical,
+  "Milk":           GlassWater,
+  "Soft Drinks":    Coffee,
+  "Rice":           Wheat,
+  "Seasonings":     Leaf,
+  "Coffee":         Coffee,
+  "Sugar":          Sparkles,
+  "Vinegar":        TestTube,
+  "Olives":         Salad,
+  "Pickles":        Vegan,
+  "Beans":          Bean,
+  "Water":          Droplets,
+  "Tonic Water":    Waves,
+  "BIB Syrup":      Container,
+  "Energy Drinks":  Zap,
+  "Ketchup":        Utensils,
+  "Malt Beverages": Beer,
+  "Speciality":     Star,
+  "Beverages":      GlassWater,
+  "Syrup":          Container,
 };
 
 const categoryAr: Record<string, string> = {
@@ -158,21 +161,21 @@ export default async function HomePage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
               {categoryCounts.map(({ category, count }) => {
-                const emoji = categoryEmoji[category] ?? "📦";
-                const ar    = categoryAr[category] ?? category;
+                const Icon = categoryIcons[category] ?? Package;
+                const ar   = categoryAr[category] ?? category;
                 return (
                   <Link
                     key={category}
                     href={`/products?category=${encodeURIComponent(category)}`}
-                    className="group flex flex-col items-center gap-2 p-4 bg-[#F7F7F5] border border-gray-100 rounded-xl hover:border-[#1B4D2E] hover:bg-white hover:shadow-sm transition-all text-center"
+                    className="group flex flex-col items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:border-[#1B4D2E] hover:shadow-sm transition-all text-center"
                   >
-                    <span className="text-4xl leading-none select-none" role="img" aria-label={category}>
-                      {emoji}
-                    </span>
+                    <div className="w-14 h-14 rounded-full bg-[#E8F5E9] flex items-center justify-center flex-shrink-0 group-hover:bg-[#1B4D2E] transition-colors">
+                      <Icon size={32} strokeWidth={1.5} className="text-[#1B4D2E] group-hover:text-white transition-colors" />
+                    </div>
                     <div>
-                      <p className="font-medium text-xs text-gray-800 leading-tight">{category}</p>
-                      <p className="text-gray-400 text-xs mt-0.5" dir="rtl">{ar}</p>
-                      <p className="text-[#1B4D2E] text-xs font-semibold mt-0.5">{count}</p>
+                      <p className="font-bold text-xs text-[#111111] leading-tight">{category}</p>
+                      <p className="text-[#6B7280] text-xs mt-0.5" dir="rtl">{ar}</p>
+                      <span className="inline-block mt-1.5 bg-[#1B4D2E] text-white text-xs font-semibold px-2 py-0.5 rounded-full">{count}</span>
                     </div>
                   </Link>
                 );
