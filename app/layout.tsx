@@ -10,8 +10,8 @@ export const metadata: Metadata = {
     "B2B FMCG distribution for hotels, restaurants, and cafés across Egypt. 225 products from top brands.",
   keywords: "HORECA, Egypt, distribution, FMCG, wholesale, Mass Distribution",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/logo-color.png.png",
+    apple: "/logo-color.png.png",
   },
 };
 

@@ -10,7 +10,7 @@ export default function Footer() {
           <div className="md:col-span-2">
             <Link href="/" className="inline-flex mb-5">
               <Image
-                src="/logo.png"
+                src="/logo-green.png.png"
                 alt="Mass Distribution"
                 width={120}
                 height={36}
