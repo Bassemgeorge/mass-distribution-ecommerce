@@ -37,6 +37,11 @@ export default function AdminDashboard() {
         supabase.from("orders").select("id, created_at, total, status, customers(business_name)").order("created_at", { ascending: false }).limit(10),
       ]);
 
+      if (ordersRes.error)    console.error("Orders count error:",    ordersRes.error.message);
+      if (pendingRes.error)   console.error("Pending count error:",   pendingRes.error.message);
+      if (revenueRes.error)   console.error("Revenue fetch error:",   revenueRes.error.message);
+      if (inquiriesRes.error) console.error("Inquiries count error:", inquiriesRes.error.message);
+      if (recentRes.error)    console.error("Recent orders error:",   recentRes.error.message);
       const revenue = (revenueRes.data ?? []).reduce((s: number, o: { total: number }) => s + (o.total ?? 0), 0);
       setStats({
         orders:    ordersRes.count   ?? 0,

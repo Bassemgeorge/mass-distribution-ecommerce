@@ -35,10 +35,11 @@ export default function AdminInquiriesPage() {
 
   const load = useCallback(async () => {
     setLoad(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("inquiries")
       .select("*")
       .order("created_at", { ascending: false });
+    if (error) console.error("Inquiries fetch error:", error.message);
     setInquiries((data as Inquiry[]) ?? []);
     setLoad(false);
   }, []);

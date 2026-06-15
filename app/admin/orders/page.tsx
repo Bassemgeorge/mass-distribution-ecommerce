@@ -44,10 +44,11 @@ export default function AdminOrdersPage() {
 
   const load = useCallback(async () => {
     setLoad(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("orders")
       .select("id, created_at, total, status, notes, customer_id, customers(business_name, name, phone, address)")
       .order("created_at", { ascending: false });
+    if (error) console.error("Orders fetch error:", error.message);
     setOrders((data as unknown as AdminOrder[]) ?? []);
     setLoad(false);
   }, []);

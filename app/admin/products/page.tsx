@@ -33,13 +33,16 @@ export default function AdminProductsPage() {
   const [newProd,  setNewProd]  = useState({ ...emptyProduct });
   const [saving,   setSave]     = useState(false);
   const [saved,    setSaved]    = useState<number | null>(null);
+  const [fetchErr, setFetchErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoad(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("products")
-      .select("id, name_en, name_ar, brand, category, price_per_piece, price_per_carton, case_count, has_tax, image, is_active")
+      .select("*")
       .order("id");
+    if (error) { console.error("Products fetch error:", error.message); setFetchErr(error.message); }
+    else setFetchErr(null);
     setProducts((data as Product[]) ?? []);
     setLoad(false);
   }, []);
@@ -54,12 +57,15 @@ export default function AdminProductsPage() {
   async function saveEdit() {
     if (!editItem) return;
     setSave(true);
-    await supabase.from("products").update({
+    const update: Record<string, unknown> = {
       price_per_piece:  editItem.price_per_piece,
       price_per_carton: editItem.price_per_carton,
       case_count:       editItem.case_count,
-      is_active:        editItem.is_active,
-    }).eq("id", editItem.id);
+    };
+    // Only update is_active if the column exists in the table
+    if ("is_active" in editItem) update.is_active = editItem.is_active;
+    const { error } = await supabase.from("products").update(update).eq("id", editItem.id);
+    if (error) console.error("Product update error:", error.message);
     setProducts((prev) => prev.map((p) => p.id === editItem.id ? { ...p, ...editItem } : p));
     setSaved(editItem.id);
     setTimeout(() => { setSaved(null); setEdit(null); }, 800);
@@ -80,6 +86,11 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-5">
+      {fetchErr && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+          <strong>Supabase error:</strong> {fetchErr}
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-[#111111]">Products</h1>

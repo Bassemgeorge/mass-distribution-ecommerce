@@ -39,10 +39,11 @@ export default function AdminCustomersPage() {
 
   const load = useCallback(async () => {
     setLoad(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("customers")
       .select("id, business_name, name, phone, email, address, created_at")
       .order("created_at", { ascending: false });
+    if (error) console.error("Customers fetch error:", error.message);
     setCustomers((data as Customer[]) ?? []);
     setLoad(false);
   }, []);
