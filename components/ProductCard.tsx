@@ -60,14 +60,17 @@ export default function ProductCard({ product }: Props) {
           {product.nameEn}
         </h3>
         <p className="text-xs text-gray-400 mb-1 text-right" dir="rtl">{product.nameAr}</p>
-        <p className="text-xs text-gray-500 mt-1">Case of {product.caseCount} pcs</p>
+        <span className="inline-block bg-[#E8F5E9] text-[#1B4D2E] text-xs font-semibold px-2 py-0.5 rounded-full mt-1">
+          {product.caseCount} pcs / carton
+        </span>
 
         <div className="mt-auto pt-4 flex items-center justify-between gap-2">
           <div>
-            <p className="text-xs text-gray-400">Per Piece</p>
-            <span className="text-base font-bold text-[#111111]">
-              EGP {product.pricePerPiece.toFixed(2)}
+            <p className="text-xs text-gray-400">Per Carton</p>
+            <span className="text-base font-bold text-[#1B4D2E]">
+              EGP {product.pricePerCarton.toFixed(2)}
             </span>
+            <p className="text-xs text-gray-400 mt-0.5">Min. 1 carton · الحد الأدنى كرتونة</p>
           </div>
 
           {/* Show quantity controls if item already in cart, else Add button */}

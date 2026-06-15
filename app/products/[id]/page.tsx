@@ -133,28 +133,36 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             <p className="text-base text-gray-400 mb-6 text-right" dir="rtl">{product.nameAr}</p>
 
             {/* Price block */}
-            <div className="bg-[#F7F7F5] rounded-xl p-5 mb-5 border border-gray-100">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-400 mb-1">Per Piece</p>
-                  <p className="text-2xl font-bold text-[#111111]">EGP {product.pricePerPiece.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-400 mb-1">Per Carton ({product.caseCount} pcs)</p>
-                  <p className="text-2xl font-bold text-[#1B4D2E]">EGP {product.pricePerCarton.toFixed(2)}</p>
-                </div>
+            <div className="bg-[#F7F7F5] rounded-xl p-5 mb-4 border border-gray-100">
+              <p className="text-xs font-medium text-gray-400 mb-1">Price per Carton (ex-VAT)</p>
+              <p className="text-3xl font-bold text-[#1B4D2E]">EGP {product.pricePerCarton.toFixed(2)}</p>
+              <p className="text-xs text-gray-400 mt-2">Unit price: EGP {product.pricePerPiece.toFixed(2)} / pc</p>
+            </div>
+
+            {/* Case contents */}
+            <div className="flex items-center gap-3 bg-[#E8F5E9] border border-green-200 rounded-xl px-4 py-3 mb-4">
+              <span className="text-lg">📦</span>
+              <div>
+                <p className="text-sm font-semibold text-[#1B4D2E]">Case contains: {product.caseCount} pcs</p>
+                <p className="text-xs text-[#1B4D2E]/70">{product.packSize}</p>
               </div>
-              <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-200">
-                VAT-exempt · Prices shown ex-VAT · Credit pricing
-              </p>
+            </div>
+
+            {/* Min order notice */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
+              <p className="text-xs font-semibold text-amber-700">Minimum order: 1 carton</p>
+              <p className="text-xs text-amber-600 mt-0.5" dir="rtl">الحد الأدنى للطلب: كرتونة واحدة</p>
             </div>
 
             {/* Qty + Add */}
             <div className="flex items-center gap-3 mb-3">
-              <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors">−</button>
-                <span className="px-4 py-2.5 text-sm font-semibold border-x border-gray-200 min-w-[3rem] text-center">{qty}</span>
-                <button onClick={() => setQty(qty + 1)} className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors">+</button>
+              <div className="flex flex-col items-center">
+                <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                  <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors">−</button>
+                  <span className="px-4 py-2.5 text-sm font-semibold border-x border-gray-200 min-w-[3rem] text-center">{qty}</span>
+                  <button onClick={() => setQty(qty + 1)} className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors">+</button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">{qty === 1 ? "1 carton" : `${qty} cartons`} = {qty * product.caseCount} pcs</p>
               </div>
               <button
                 onClick={handleAdd}

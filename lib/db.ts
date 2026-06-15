@@ -13,8 +13,10 @@ export interface DbProduct {
   name_ar: string;
   brand: string;
   category: string;
-  price: number;       // per piece, ex-VAT
-  pack_size: string | null;
+  price: number;              // unit/piece price, ex-VAT (EGP)
+  carton_price: number | null; // price per carton (what customer pays)
+  pack_size: string | null;   // e.g. "Case of 12 pcs"
+  case_count: string | null;  // e.g. "12 pcs per carton"
   image_url: string | null;
   is_active: boolean;
   stock: number;
@@ -30,9 +32,11 @@ export function toProduct(p: DbProduct) {
     category:       p.category,
     nameEn:         p.name_en,
     nameAr:         p.name_ar,
+    packSize:       p.pack_size ?? `Case of ${packCount} pcs`,
     caseCount:      packCount,
     pricePerPiece:  p.price,
-    pricePerCarton: p.price * packCount,
+    // Use DB carton_price if set, otherwise compute from unit price × case count
+    pricePerCarton: p.carton_price ?? (p.price * packCount),
     hasTax:         false,
     image:          p.image_url ?? "/placeholder-product.svg",
   };

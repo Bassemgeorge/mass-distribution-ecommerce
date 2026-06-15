@@ -108,8 +108,8 @@ function CheckoutContent() {
         product_id:   parseInt(product.id, 10),
         product_name: product.nameEn,
         quantity,
-        unit_price:   product.pricePerPiece,
-        subtotal:     product.pricePerPiece * quantity,
+        unit_price:   product.pricePerCarton,
+        subtotal:     product.pricePerCarton * quantity,
       }));
 
       const { error: itemErr } = await supabase.from("order_items").insert(itemRows);
@@ -262,13 +262,13 @@ function CheckoutContent() {
                       {product.nameEn}
                       <span className="text-gray-400"> × {quantity}</span>
                     </span>
-                    <span className="font-semibold flex-shrink-0">EGP {(product.pricePerPiece * quantity).toFixed(2)}</span>
+                    <span className="font-semibold flex-shrink-0">EGP {(product.pricePerCarton * quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
               <div className="border-t border-gray-200 pt-3 space-y-2 text-sm">
                 <div className="flex justify-between text-gray-500">
-                  <span>Subtotal ({count} pcs)</span>
+                  <span>Subtotal ({count} {count === 1 ? "carton" : "cartons"})</span>
                   <span className="font-semibold text-[#111111]">EGP {total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-500">
@@ -276,7 +276,7 @@ function CheckoutContent() {
                   <span className="text-[#1B4D2E] font-medium">To be confirmed</span>
                 </div>
                 <div className="flex justify-between font-bold text-sm pt-2 border-t border-gray-200">
-                  <span>Total (ex-VAT)</span>
+                  <span>Total (excl. VAT)</span>
                   <span>EGP {total.toFixed(2)}</span>
                 </div>
               </div>

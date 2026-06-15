@@ -52,8 +52,10 @@ export default function CartPage() {
                   <span className="text-xs text-gray-400">{product.brand} · {product.category}</span>
                   <h3 className="font-semibold text-sm text-[#111111] leading-snug truncate">{product.nameEn}</h3>
                   <p className="text-xs text-gray-400 truncate" dir="rtl">{product.nameAr}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Case of {product.caseCount} pcs</p>
-                  <p className="text-[#1B4D2E] font-semibold mt-0.5 text-sm">EGP {product.pricePerPiece.toFixed(2)} / pc</p>
+                  <p className="text-[#1B4D2E] font-semibold mt-0.5 text-sm">
+                    {quantity} {quantity === 1 ? "carton" : "cartons"} × EGP {product.pricePerCarton.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-gray-400">= {quantity * product.caseCount} pcs total</p>
                 </div>
                 <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                   <button
@@ -67,7 +69,7 @@ export default function CartPage() {
                   >+</button>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="font-bold text-sm text-[#111111]">EGP {(product.pricePerPiece * quantity).toFixed(2)}</p>
+                  <p className="font-bold text-sm text-[#111111]">EGP {(product.pricePerCarton * quantity).toFixed(2)}</p>
                   <button onClick={() => remove(product.id)} className="mt-1 text-gray-300 hover:text-red-400 transition-colors" aria-label="Remove">
                     <Trash2 size={14} />
                   </button>
@@ -96,7 +98,7 @@ export default function CartPage() {
               <h2 className="text-base font-bold text-[#111111] mb-5">Order Summary</h2>
               <div className="space-y-2.5 text-sm mb-5">
                 <div className="flex justify-between text-gray-500">
-                  <span>Subtotal ({count} pcs)</span>
+                  <span>Subtotal ({count} {count === 1 ? "carton" : "cartons"})</span>
                   <span className="font-semibold text-[#111111]">EGP {total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-500">
@@ -105,7 +107,7 @@ export default function CartPage() {
                 </div>
                 <p className="text-xs text-gray-400">Prices ex-VAT. Tax calculated at checkout.</p>
                 <div className="border-t border-gray-200 pt-2.5 flex justify-between font-bold text-sm">
-                  <span>Total (ex-VAT)</span>
+                  <span>Total (excl. VAT)</span>
                   <span>EGP {total.toFixed(2)}</span>
                 </div>
               </div>

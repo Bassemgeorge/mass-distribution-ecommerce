@@ -11,8 +11,10 @@ interface Product {
   name_ar: string;
   brand: string;
   category: string;
-  price: number;          // per piece, ex-VAT (EGP)
+  price: number;               // per piece, ex-VAT (EGP)
+  carton_price: number | null; // per carton (selling price)
   pack_size: string | null;
+  case_count: string | null;
   image_url: string | null;
   is_active: boolean;
   stock: number;
@@ -20,7 +22,8 @@ interface Product {
 
 const emptyProduct: Omit<Product, "id"> = {
   name_en: "", name_ar: "", brand: "", category: "",
-  price: 0, pack_size: null, image_url: null, is_active: true, stock: 999,
+  price: 0, carton_price: null, pack_size: null, case_count: null,
+  image_url: null, is_active: true, stock: 999,
 };
 
 export default function AdminProductsPage() {
@@ -64,10 +67,12 @@ export default function AdminProductsPage() {
     if (!editItem) return;
     setSave(true);
     const { error } = await supabase.from("products").update({
-      price:     editItem.price,
-      pack_size: editItem.pack_size,
-      stock:     editItem.stock,
-      is_active: editItem.is_active,
+      price:        editItem.price,
+      carton_price: editItem.carton_price,
+      pack_size:    editItem.pack_size,
+      case_count:   editItem.case_count,
+      stock:        editItem.stock,
+      is_active:    editItem.is_active,
     }).eq("id", editItem.id);
     if (error) console.error("Product update error:", error.message);
     setProducts((prev) => prev.map((p) => p.id === editItem.id ? { ...p, ...editItem } : p));
@@ -134,8 +139,9 @@ export default function AdminProductsPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Name</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Brand</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Category</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Price/Unit</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden lg:table-cell">Pack Size</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Unit Price</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Carton Price</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden lg:table-cell">Case Count</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Stock</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Active</th>
                   <th className="px-4 py-3" />
@@ -156,7 +162,10 @@ export default function AdminProductsPage() {
                     <td className="px-4 py-3 text-right text-sm font-semibold text-[#111111]">
                       EGP {(p.price ?? 0).toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-400 hidden lg:table-cell">{p.pack_size ?? "—"}</td>
+                    <td className="px-4 py-3 text-right text-sm font-semibold text-[#1B4D2E] hidden md:table-cell">
+                      EGP {(p.carton_price ?? 0).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-400 hidden lg:table-cell">{p.case_count ?? p.pack_size ?? "—"}</td>
                     <td className="px-4 py-3 text-center text-xs text-gray-500 hidden sm:table-cell">{p.stock ?? 999}</td>
                     <td className="px-4 py-3 text-center hidden sm:table-cell">
                       <span className={`inline-block w-2 h-2 rounded-full ${p.is_active === false ? "bg-gray-300" : "bg-green-400"}`} />
@@ -187,21 +196,41 @@ export default function AdminProductsPage() {
             </div>
             <p className="text-sm font-medium text-gray-600 mb-5">{editItem.name_en}</p>
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Unit Price (EGP, ex-VAT)</label>
-                <input
-                  type="number" step="0.01" value={editItem.price}
-                  onChange={(e) => setEdit({ ...editItem, price: parseFloat(e.target.value) || 0 })}
-                  className={inp}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Unit Price (EGP)</label>
+                  <input
+                    type="number" step="0.01" value={editItem.price}
+                    onChange={(e) => setEdit({ ...editItem, price: parseFloat(e.target.value) || 0 })}
+                    className={inp}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Carton Price (EGP)</label>
+                  <input
+                    type="number" step="0.01" value={editItem.carton_price ?? ""}
+                    onChange={(e) => setEdit({ ...editItem, carton_price: parseFloat(e.target.value) || null })}
+                    className={inp} placeholder="0.00"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Pack Size</label>
-                <input
-                  type="text" value={editItem.pack_size ?? ""}
-                  onChange={(e) => setEdit({ ...editItem, pack_size: e.target.value || null })}
-                  className={inp} placeholder="Case of 12 pcs"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Pack Size</label>
+                  <input
+                    type="text" value={editItem.pack_size ?? ""}
+                    onChange={(e) => setEdit({ ...editItem, pack_size: e.target.value || null })}
+                    className={inp} placeholder="Case of 12 pcs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Case Count</label>
+                  <input
+                    type="text" value={editItem.case_count ?? ""}
+                    onChange={(e) => setEdit({ ...editItem, case_count: e.target.value || null })}
+                    className={inp} placeholder="12 pcs per carton"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Stock</label>
@@ -272,20 +301,38 @@ export default function AdminProductsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Stock</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Carton Price (EGP)</label>
                   <input
-                    type="number" value={newProd.stock}
-                    onChange={(e) => setNewProd((p) => ({ ...p, stock: parseInt(e.target.value) || 0 }))}
-                    className={inp}
+                    type="number" step="0.01" value={newProd.carton_price ?? ""}
+                    onChange={(e) => setNewProd((p) => ({ ...p, carton_price: parseFloat(e.target.value) || null }))}
+                    className={inp} placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Pack Size</label>
+                  <input
+                    type="text" value={newProd.pack_size ?? ""}
+                    onChange={(e) => setNewProd((p) => ({ ...p, pack_size: e.target.value || null }))}
+                    className={inp} placeholder="Case of 12 pcs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Case Count</label>
+                  <input
+                    type="text" value={newProd.case_count ?? ""}
+                    onChange={(e) => setNewProd((p) => ({ ...p, case_count: e.target.value || null }))}
+                    className={inp} placeholder="12 pcs per carton"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Pack Size</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Stock</label>
                 <input
-                  type="text" value={newProd.pack_size ?? ""}
-                  onChange={(e) => setNewProd((p) => ({ ...p, pack_size: e.target.value || null }))}
-                  className={inp} placeholder="Case of 12 pcs"
+                  type="number" value={newProd.stock}
+                  onChange={(e) => setNewProd((p) => ({ ...p, stock: parseInt(e.target.value) || 0 }))}
+                  className={inp}
                 />
               </div>
               <div>

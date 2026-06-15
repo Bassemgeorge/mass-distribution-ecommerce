@@ -21,16 +21,18 @@ if (!url || !key) {
 const supabase = createClient(url, key);
 
 const rows = products.map((p) => ({
-  id:        parseInt(p.id, 10),
-  name_en:   p.nameEn,
-  name_ar:   p.nameAr,
-  brand:     p.brand,
-  category:  p.category,
-  price:     p.pricePerPiece,
-  pack_size: `Case of ${p.caseCount} pcs`,
-  image_url: null,          // ProductImage component handles fallback chain
-  is_active: true,
-  stock:     999,
+  id:           parseInt(p.id, 10),
+  name_en:      p.nameEn,
+  name_ar:      p.nameAr,
+  brand:        p.brand,
+  category:     p.category,
+  price:        p.pricePerPiece,
+  carton_price: p.pricePerCarton,
+  pack_size:    `Case of ${p.caseCount} pcs`,
+  case_count:   `${p.caseCount} pcs per carton`,
+  image_url:    null,
+  is_active:    true,
+  stock:        999,
 }));
 
 async function seed() {

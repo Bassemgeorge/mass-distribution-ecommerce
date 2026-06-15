@@ -10,9 +10,10 @@ export interface CartProduct {
   nameAr: string;
   brand: string;
   category: string;
-  caseCount: number;
+  packSize: string;       // e.g. "Case of 12 pcs"
+  caseCount: number;      // numeric pieces per carton
   pricePerPiece: number;
-  pricePerCarton: number;
+  pricePerCarton: number; // selling price — 1 carton minimum
   hasTax: boolean;
   image: string;
 }
@@ -110,7 +111,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [state.items]);
 
-  const total = state.items.reduce((sum, i) => sum + i.product.pricePerPiece * i.quantity, 0);
+  const total = state.items.reduce((sum, i) => sum + i.product.pricePerCarton * i.quantity, 0);
   const count = state.items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
