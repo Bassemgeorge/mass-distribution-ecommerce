@@ -3,12 +3,35 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/lib/cartStore";
-import { ShoppingCart, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { ShoppingCart, Menu, X, User, LayoutDashboard, ClipboardList, LogOut, ChevronDown } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
   const { count } = useCart();
+  const { user, customer, signOut } = useAuth();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  async function handleSignOut() {
+    setDropdownOpen(false);
+    setOpen(false);
+    await signOut();
+    router.push("/");
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-[#111111] border-b border-white/10">
@@ -28,10 +51,10 @@ export default function Navbar() {
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
           {[
-            { href: "/",        label: "Home"     },
-            { href: "/products",label: "Products" },
-            { href: "/about",   label: "About"    },
-            { href: "/contact", label: "Contact"  },
+            { href: "/",         label: "Home"     },
+            { href: "/products", label: "Products" },
+            { href: "/about",    label: "About"    },
+            { href: "/contact",  label: "Contact"  },
           ].map(({ href, label }) => (
             <Link key={href} href={href} className="text-white/70 hover:text-white text-sm font-medium transition-colors">
               {label}
@@ -52,12 +75,48 @@ export default function Navbar() {
               </span>
             )}
           </Link>
-          <Link
-            href="/account"
-            className="hidden sm:inline-flex items-center gap-1.5 bg-[#1B4D2E] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#163d24] transition-colors"
-          >
-            My Account
-          </Link>
+
+          {user ? (
+            /* Auth dropdown */
+            <div className="hidden sm:block relative" ref={dropdownRef}>
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-2 bg-[#1B4D2E] text-white text-sm font-medium px-3 py-2 rounded-lg hover:bg-[#163d24] transition-colors"
+              >
+                <User size={15} />
+                <span className="max-w-[120px] truncate">{customer?.business_name ?? user.email?.split("@")[0]}</span>
+                <ChevronDown size={13} className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-gray-100 mb-1">
+                    <p className="text-xs font-semibold text-[#111111] truncate">{customer?.business_name ?? "My Account"}</p>
+                    <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                  </div>
+                  <Link href="/account/dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-[#111111] hover:bg-gray-50 transition-colors">
+                    <LayoutDashboard size={14} className="text-[#1B4D2E]" /> Dashboard
+                  </Link>
+                  <Link href="/account/orders" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-[#111111] hover:bg-gray-50 transition-colors">
+                    <ClipboardList size={14} className="text-[#1B4D2E]" /> My Orders
+                  </Link>
+                  <div className="border-t border-gray-100 mt-1 pt-1">
+                    <button onClick={handleSignOut} className="flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors">
+                      <LogOut size={14} /> Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/account/login"
+              className="hidden sm:inline-flex items-center gap-1.5 bg-[#1B4D2E] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#163d24] transition-colors"
+            >
+              Sign In
+            </Link>
+          )}
+
           <button
             className="md:hidden text-white/70 hover:text-white p-2 transition-colors"
             onClick={() => setOpen(!open)}
@@ -76,17 +135,34 @@ export default function Navbar() {
             { href: "/products", label: "Products"   },
             { href: "/about",    label: "About"      },
             { href: "/contact",  label: "Contact"    },
-            { href: "/account",  label: "My Account" },
           ].map(({ href, label }) => (
             <Link
               key={href}
               href={href}
               onClick={() => setOpen(false)}
-              className="text-white/70 hover:text-white font-medium py-2.5 border-b border-white/10 last:border-0 transition-colors"
+              className="text-white/70 hover:text-white font-medium py-2.5 border-b border-white/10 transition-colors"
             >
               {label}
             </Link>
           ))}
+
+          {user ? (
+            <>
+              <Link href="/account/dashboard" onClick={() => setOpen(false)} className="text-white/70 hover:text-white font-medium py-2.5 border-b border-white/10 transition-colors flex items-center gap-2">
+                <LayoutDashboard size={14} /> Dashboard
+              </Link>
+              <Link href="/account/orders" onClick={() => setOpen(false)} className="text-white/70 hover:text-white font-medium py-2.5 border-b border-white/10 transition-colors flex items-center gap-2">
+                <ClipboardList size={14} /> My Orders
+              </Link>
+              <button onClick={handleSignOut} className="text-red-400 hover:text-red-300 font-medium py-2.5 text-left flex items-center gap-2 transition-colors">
+                <LogOut size={14} /> Sign Out
+              </button>
+            </>
+          ) : (
+            <Link href="/account/login" onClick={() => setOpen(false)} className="text-white/70 hover:text-white font-medium py-2.5 transition-colors">
+              Sign In
+            </Link>
+          )}
         </div>
       )}
     </header>

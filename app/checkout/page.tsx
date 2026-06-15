@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useCart } from "@/lib/cartStore";
+import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ShoppingBag, Loader2 } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Loader2, LogIn } from "lucide-react";
 
 type FormState = {
   businessName: string;
@@ -26,12 +27,26 @@ const emptyForm: FormState = {
 
 function CheckoutContent() {
   const { items, total, count, clear } = useCart();
+  const { user, customer } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [form, setForm]       = useState<FormState>({ ...emptyForm, notes: searchParams.get("notes") ?? "" });
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+
+  // Pre-fill from auth profile
+  useEffect(() => {
+    if (customer) {
+      setForm((f) => ({
+        ...f,
+        businessName: customer.business_name ?? f.businessName,
+        contactName:  customer.name          ?? f.contactName,
+        phone:        customer.phone         ?? f.phone,
+        address:      customer.address       ?? f.address,
+      }));
+    }
+  }, [customer]);
 
   function set(field: keyof FormState, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -46,25 +61,38 @@ function CheckoutContent() {
     setLoading(true);
 
     try {
-      // 1 — insert customer
-      const { data: customer, error: custErr } = await supabase
-        .from("customers")
-        .insert({
+      // 1 — resolve customer ID
+      let customerId: string;
+      if (user && customer) {
+        // Logged-in user: update their profile and reuse their ID
+        await supabase.from("customers").update({
           name:          form.contactName,
           business_name: form.businessName,
           phone:         form.phone,
           address:       `${form.address}, ${form.area}`,
-        })
-        .select("id")
-        .single();
-
-      if (custErr) throw new Error(custErr.message);
+        }).eq("id", user.id);
+        customerId = user.id;
+      } else {
+        // Guest: insert new customer row
+        const { data: newCustomer, error: custErr } = await supabase
+          .from("customers")
+          .insert({
+            name:          form.contactName,
+            business_name: form.businessName,
+            phone:         form.phone,
+            address:       `${form.address}, ${form.area}`,
+          })
+          .select("id")
+          .single();
+        if (custErr) throw new Error(custErr.message);
+        customerId = (newCustomer as { id: string }).id;
+      }
 
       // 2 — insert order
       const { data: order, error: orderErr } = await supabase
         .from("orders")
         .insert({
-          customer_id: customer.id,
+          customer_id: customerId,
           status:      "pending",
           total:       total,
           notes:       [form.notes, `Payment: ${form.paymentMethod}`].filter(Boolean).join(" | ") || null,
@@ -128,7 +156,17 @@ function CheckoutContent() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-bold text-[#111111] mb-8">Checkout</h1>
+        <h1 className="text-2xl font-bold text-[#111111] mb-6">Checkout</h1>
+
+        {/* Guest banner */}
+        {!user && (
+          <div className="mb-6 flex items-center gap-3 bg-[#E8F5E9] border border-green-200 rounded-xl px-4 py-3">
+            <LogIn size={16} className="text-[#1B4D2E] flex-shrink-0" />
+            <p className="text-sm text-[#1B4D2E]">
+              <Link href="/account/login" className="font-semibold hover:underline">Sign in</Link> to track your order and auto-fill your details.
+            </p>
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>
