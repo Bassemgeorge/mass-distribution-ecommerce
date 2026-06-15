@@ -6,15 +6,16 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   LayoutDashboard, ShoppingBag, Package, Users, MessageSquare,
-  LogOut, Menu, X, ChevronRight,
+  LogOut, Menu, X, ChevronRight, Upload,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/admin",            label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/orders",     label: "Orders",    icon: ShoppingBag },
-  { href: "/admin/products",   label: "Products",  icon: Package },
-  { href: "/admin/customers",  label: "Customers", icon: Users },
-  { href: "/admin/inquiries",  label: "Inquiries", icon: MessageSquare },
+  { href: "/admin",                label: "Dashboard",    icon: LayoutDashboard },
+  { href: "/admin/orders",         label: "Orders",       icon: ShoppingBag },
+  { href: "/admin/products",       label: "Products",     icon: Package },
+  { href: "/admin/import-prices",  label: "Import Prices",icon: Upload },
+  { href: "/admin/customers",      label: "Customers",    icon: Users },
+  { href: "/admin/inquiries",      label: "Inquiries",    icon: MessageSquare },
 ];
 
 export default function AdminLayoutClient({ children }: { children: React.ReactNode }) {

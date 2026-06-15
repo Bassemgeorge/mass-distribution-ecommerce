@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { Search, Loader2, Edit2, X, Plus, Check } from "lucide-react";
+import { Search, Loader2, Edit2, X, Plus, Check, Download } from "lucide-react";
 
 // Matches the actual Supabase products table schema (products-schema.sql)
 interface Product {
@@ -36,6 +36,28 @@ export default function AdminProductsPage() {
   const [saving,   setSave]     = useState(false);
   const [saved,    setSaved]    = useState<number | null>(null);
   const [fetchErr, setFetchErr] = useState<string | null>(null);
+
+  function exportCSV() {
+    const header = ["id", "name_en", "name_ar", "brand", "category", "pack_size", "price", "carton_price"];
+    const rows = products.map((p) => [
+      p.id,
+      `"${(p.name_en ?? "").replace(/"/g, '""')}"`,
+      `"${(p.name_ar ?? "").replace(/"/g, '""')}"`,
+      `"${(p.brand ?? "").replace(/"/g, '""')}"`,
+      `"${(p.category ?? "").replace(/"/g, '""')}"`,
+      `"${(p.pack_size ?? "").replace(/"/g, '""')}"`,
+      p.price ?? 0,
+      p.carton_price ?? "",
+    ]);
+    const csv = [header.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `mass-dist-prices-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const load = useCallback(async () => {
     setLoad(true);
@@ -116,6 +138,13 @@ export default function AdminProductsPage() {
               className="border border-gray-200 rounded-lg pl-8 pr-4 py-2 text-sm focus:outline-none focus:border-[#1B4D2E] bg-white w-52"
             />
           </div>
+          <button
+            onClick={exportCSV}
+            disabled={products.length === 0}
+            className="flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-medium px-4 py-2 rounded-lg hover:border-[#1B4D2E] hover:text-[#1B4D2E] transition-colors disabled:opacity-40"
+          >
+            <Download size={14} /> Export to CSV
+          </button>
           <button
             onClick={() => setAdd(true)}
             className="flex items-center gap-2 bg-[#1B4D2E] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#163d24] transition-colors"
