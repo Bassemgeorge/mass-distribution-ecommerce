@@ -3,36 +3,38 @@ import ProductCard from "@/components/ProductCard";
 import { toProduct } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import {
-  ArrowRight, Droplet, FlaskConical, Utensils, Star, Leaf,
-  CircleDot, Archive, Flame, ChefHat, GlassWater, Coffee,
-  UtensilsCrossed, Package, Search, ShoppingCart, Truck,
-  CheckCircle, TrendingUp, Users, Clock,
+  ArrowRight, Package, Search, ShoppingCart, Truck,
+  CheckCircle, TrendingUp, Users, Clock, Star,
 } from "lucide-react";
 
 // Always fetch fresh from Supabase — don't statically generate
 export const dynamic = "force-dynamic";
 
-const categoryIcons: Record<string, React.ElementType> = {
-  "Olive Oil":    Droplet,
-  "Cooking Oil":  Droplet,
-  "Vinegar":      FlaskConical,
-  "Tomato Paste": CircleDot,
-  "Ketchup":      Utensils,
-  "Speciality":   Star,
-  "Beans":        Leaf,
-  "Olives":       Archive,
-  "Pickles":      Archive,
-  "Seasonings":   Flame,
-  "Sauces":       ChefHat,
-  "Milk":         GlassWater,
-  "Syrup":        Coffee,
-  "Pasta":        UtensilsCrossed,
-  "Beverages":    GlassWater,
-  "Soft Drinks":  GlassWater,
-  "Water":        Droplet,
-  "Rice":         Package,
-  "Sugar":        Package,
-  "Coffee":       Coffee,
+const categoryEmoji: Record<string, string> = {
+  "Cooking Oil":     "🫙",
+  "Olive Oil":       "🫒",
+  "Pasta":           "🍝",
+  "Tomato Paste":    "🍅",
+  "Sauces":          "🥫",
+  "Milk":            "🥛",
+  "Soft Drinks":     "🧃",
+  "Rice":            "🌾",
+  "Seasonings":      "🌿",
+  "Coffee":          "☕",
+  "Sugar":           "🍬",
+  "Vinegar":         "🍶",
+  "Olives":          "🫒",
+  "Pickles":         "🥒",
+  "Beans":           "🫘",
+  "Water":           "💧",
+  "Tonic Water":     "🫧",
+  "BIB Syrup":       "🍯",
+  "Energy Drinks":   "⚡",
+  "Ketchup":         "🍅",
+  "Malt Beverages":  "🍺",
+  "Speciality":      "⭐",
+  "Beverages":       "🧃",
+  "Syrup":           "🍯",
 };
 
 const categoryAr: Record<string, string> = {
@@ -156,17 +158,17 @@ export default async function HomePage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
               {categoryCounts.map(({ category, count }) => {
-                const Icon = categoryIcons[category] ?? Package;
-                const ar   = categoryAr[category] ?? category;
+                const emoji = categoryEmoji[category] ?? "📦";
+                const ar    = categoryAr[category] ?? category;
                 return (
                   <Link
                     key={category}
                     href={`/products?category=${encodeURIComponent(category)}`}
-                    className="group flex flex-col items-center gap-2.5 p-4 bg-[#F7F7F5] border border-gray-100 rounded-xl hover:border-[#1B4D2E] hover:bg-white hover:shadow-sm transition-all text-center"
+                    className="group flex flex-col items-center gap-2 p-4 bg-[#F7F7F5] border border-gray-100 rounded-xl hover:border-[#1B4D2E] hover:bg-white hover:shadow-sm transition-all text-center"
                   >
-                    <div className="w-10 h-10 bg-white border border-gray-200 rounded-lg flex items-center justify-center group-hover:border-[#1B4D2E] group-hover:bg-[#1B4D2E] transition-all">
-                      <Icon size={18} className="text-gray-500 group-hover:text-white transition-colors" />
-                    </div>
+                    <span className="text-4xl leading-none select-none" role="img" aria-label={category}>
+                      {emoji}
+                    </span>
                     <div>
                       <p className="font-medium text-xs text-gray-800 leading-tight">{category}</p>
                       <p className="text-gray-400 text-xs mt-0.5" dir="rtl">{ar}</p>
