@@ -11,11 +11,18 @@ interface ProductImageProps {
   sizes?: string;
 }
 
-// Try each src in order — first one that loads wins
 function buildSrcList(product: CartProduct): string[] {
-  const id = product.id;
+  const id    = product.id;
   const brand = product.brand;
-  return [
+  const srcs: string[] = [];
+
+  // 1 — Supabase Storage URL (set from DB image_url)
+  if (product.image && !product.image.includes("placeholder")) {
+    srcs.push(product.image);
+  }
+
+  // 2 — Local public folder fallbacks
+  srcs.push(
     `/products/${id}.jpg`,
     `/products/${id}.png`,
     `/products/${id}.webp`,
@@ -23,7 +30,9 @@ function buildSrcList(product: CartProduct): string[] {
     `/brands/${brand}.png`,
     `/brands/${brand}.webp`,
     `/placeholder-product.svg`,
-  ];
+  );
+
+  return srcs;
 }
 
 export default function ProductImage({ product, fill = false, className = "", sizes }: ProductImageProps) {
@@ -46,6 +55,7 @@ export default function ProductImage({ product, fill = false, className = "", si
         sizes={sizes ?? "(max-width: 768px) 100vw, 400px"}
         className={className}
         onError={handleError}
+        unoptimized={src.includes("supabase.co")}
       />
     );
   }
@@ -59,6 +69,7 @@ export default function ProductImage({ product, fill = false, className = "", si
       height={400}
       className={className}
       onError={handleError}
+      unoptimized={src.includes("supabase.co")}
     />
   );
 }
