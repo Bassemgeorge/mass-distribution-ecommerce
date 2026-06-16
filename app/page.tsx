@@ -53,28 +53,17 @@ const BRAND_PARTNERS = [
   { name: "Lipton",    color: "#FFD700",  text: "#333" },
 ];
 
-// ── Hero photo grid (9 cells, direct Unsplash URLs) ───────────────────────────
-const HERO_PHOTOS = [
-  { url: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop", alt: "Restaurant kitchen" },
-  { url: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=400&fit=crop", alt: "Plated food" },
-  { url: "https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=400&h=400&fit=crop", alt: "Chef cooking" },
-  { url: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=400&fit=crop", alt: "Food spread" },
-  { url: "https://images.unsplash.com/photo-1493770348161-369560ae357d?w=400&h=400&fit=crop", alt: "Healthy food" },
-  { url: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop", alt: "Food hero" },
-  { url: "https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?w=400&h=400&fit=crop", alt: "Professional chef" },
-  { url: "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=400&h=400&fit=crop", alt: "Restaurant bar" },
-  { url: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=400&fit=crop", alt: "Burger" },
-];
-
 export default async function HomePage() {
-  const [featuredRes, countRes, catRes, brandRes] = await Promise.all([
+  const [featuredRes, countRes, catRes, brandRes, showcaseRes] = await Promise.all([
     supabase.from("products").select("*").eq("is_active", true).order("id").limit(8),
     supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("products").select("category").eq("is_active", true),
     supabase.from("products").select("brand").eq("is_active", true),
+    supabase.from("products").select("*").eq("is_active", true).not("image_url", "is", null).limit(4),
   ]);
 
-  const featured   = (featuredRes.data ?? []).map(toProduct);
+  const featured        = (featuredRes.data ?? []).map(toProduct);
+  const showcaseProducts = (showcaseRes.data ?? []).map(toProduct);
   const totalCount = countRes.count ?? 0;
 
   const catMap: Record<string, number> = {};
@@ -103,60 +92,97 @@ export default async function HomePage() {
         .brand-scroll-track:hover { animation-play-state: paused; }
       `}</style>
 
-      {/* ── HERO — mosaic photo grid ──────────────────────────────────────── */}
-      <section className="relative h-[480px] sm:h-[560px] overflow-hidden">
-        {/* 3×3 photo grid as background */}
-        <div className="absolute inset-0 grid grid-cols-3 grid-rows-3">
-          {HERO_PHOTOS.map((photo, i) => (
-            <div key={i} className="relative overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photo.url}
-                alt={photo.alt}
-                className="w-full h-full object-cover"
-                loading={i < 3 ? "eager" : "lazy"}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Radial dark-green overlay — darkest at center for text legibility */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 65% 75% at 50% 50%, rgba(27,77,46,0.93) 0%, rgba(27,77,46,0.65) 55%, rgba(10,30,18,0.45) 100%)",
-          }}
-        />
-
-        {/* Hero content centered */}
-        <div className="relative z-10 h-full flex flex-col items-center justify-center text-white text-center px-4 sm:px-6">
-          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white/80 text-xs font-semibold uppercase tracking-widest px-3 py-1.5 rounded-full mb-5">
+      {/* ── HERO — split screen ───────────────────────────────────────────── */}
+      <section className="flex flex-col md:flex-row overflow-hidden" style={{ minHeight: "580px" }}>
+        {/* Left panel — dark green */}
+        <div className="w-full md:w-[55%] bg-[#1B4D2E] flex flex-col justify-center px-8 sm:px-12 py-14 text-white">
+          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white/80 text-xs font-semibold uppercase tracking-widest px-3 py-1.5 rounded-full mb-6 self-start">
             <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
             HORECA Distribution · Egypt
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-3 max-w-2xl drop-shadow-lg">
-            Your Trusted Supply Partner for Egypt&apos;s HORECA Sector
+          <h1 className="text-3xl sm:text-4xl md:text-[2.6rem] font-extrabold leading-tight mb-4 max-w-lg">
+            Egypt&apos;s HORECA Supply, Simplified.
           </h1>
-          <p className="text-white/70 text-base mb-1 max-w-xl leading-relaxed">
-            {totalCount} products across {brandCounts} top brands — delivered across Cairo &amp; Giza.
+          <p className="text-white/60 text-base mb-2" dir="rtl">
+            توريد الضيافة في مصر، ببساطة
           </p>
-          <p className="text-white/50 text-sm mb-8" dir="rtl">
-            شريكك الموثوق في توريد احتياجات قطاع الضيافة في مصر
+          <p className="text-white/75 text-sm mb-8 max-w-sm leading-relaxed">
+            Order by carton. Delivered in 24–48 hours across Cairo &amp; Giza.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 mb-8">
             <Link
               href="/products"
               className="inline-flex items-center justify-center gap-2 bg-white text-[#1B4D2E] font-bold px-7 py-3 rounded-xl hover:bg-gray-50 transition-colors text-sm shadow-lg"
             >
-              Browse Products <ArrowRight size={15} />
+              Start Ordering <ArrowRight size={15} />
             </Link>
             <Link
-              href="/contact"
+              href="/products"
               className="inline-flex items-center justify-center gap-2 border border-white/40 text-white font-medium px-7 py-3 rounded-xl hover:border-white hover:bg-white/10 transition-colors text-sm"
             >
-              Get in Touch
+              View Catalog
             </Link>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["223+ Products", "800+ Clients", "Since 2017"].map((pill) => (
+              <span
+                key={pill}
+                className="bg-white/10 border border-white/20 text-white/80 text-xs font-semibold px-3.5 py-1.5 rounded-full"
+              >
+                {pill}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Right panel — product showcase */}
+        <div
+          className="hidden md:flex w-[45%] bg-[#F0F7F3] items-center justify-center relative"
+          style={{
+            backgroundImage: "radial-gradient(circle, #1B4D2E22 1px, transparent 1px)",
+            backgroundSize: "20px 20px",
+          }}
+        >
+          <div className="grid grid-cols-2 gap-5 p-10">
+            {showcaseProducts.length > 0
+              ? showcaseProducts.slice(0, 4).map((p, i) => {
+                  const rotations = ["-rotate-2", "rotate-2", "rotate-[1.5deg]", "-rotate-[1.5deg]"];
+                  return (
+                    <div
+                      key={p.id}
+                      className={`bg-white rounded-2xl shadow-lg overflow-hidden ${rotations[i % 4]} hover:scale-105 transition-transform duration-200`}
+                      style={{ width: 140 }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.image}
+                        alt={p.nameEn}
+                        className="w-full h-[100px] object-cover"
+                        loading="eager"
+                      />
+                      <div className="p-2.5">
+                        <p className="text-xs font-semibold text-gray-800 truncate leading-snug">{p.nameEn}</p>
+                        <p className="text-xs text-[#1B4D2E] font-bold mt-0.5">EGP {p.pricePerCarton.toFixed(0)}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              : Array.from({ length: 4 }).map((_, i) => {
+                  const rotations = ["-rotate-2", "rotate-2", "rotate-[1.5deg]", "-rotate-[1.5deg]"];
+                  return (
+                    <div
+                      key={i}
+                      className={`bg-white rounded-2xl shadow-lg overflow-hidden ${rotations[i]} animate-pulse`}
+                      style={{ width: 140 }}
+                    >
+                      <div className="w-full h-[100px] bg-gray-200" />
+                      <div className="p-2.5 space-y-1.5">
+                        <div className="h-3 bg-gray-100 rounded w-3/4" />
+                        <div className="h-3 bg-gray-100 rounded w-1/2" />
+                      </div>
+                    </div>
+                  );
+                })}
           </div>
         </div>
       </section>
@@ -173,7 +199,7 @@ export default async function HomePage() {
             {[
               { icon: Package,    value: `${totalCount}+`, label: "Products" },
               { icon: Users,      value: "800+",           label: "Customers" },
-              { icon: TrendingUp, value: "4,000+",         label: "Touchpoints" },
+              { icon: TrendingUp, value: "4,000+",         label: "Monthly Orders" },
               { icon: Clock,      value: "Since 2017",     label: "In the Market" },
             ].map(({ icon: Icon, value, label }) => (
               <div key={label} className="flex flex-col items-center gap-1">
@@ -341,7 +367,7 @@ export default async function HomePage() {
             {[
               { icon: CheckCircle, title: "100% HORECA Focused",      titleAr: "متخصصون في الضيافة",         desc: "Every product and service is designed specifically for hotels, restaurants, and cafés." },
               { icon: TrendingUp,  title: "Strong Annual Growth",      titleAr: "نمو سنوي قوي",               desc: "Consistent year-on-year growth backed by deep operator relationships across Egypt." },
-              { icon: Package,     title: `${brandCounts} Brands, ${totalCount} Products`, titleAr: `${brandCounts} علامات تجارية`, desc: "All your HORECA essentials from one trusted distribution partner." },
+              { icon: Package,     title: `13 Brands, ${totalCount} Products`, titleAr: "13 علامات تجارية", desc: "All your HORECA essentials from one trusted distribution partner." },
               { icon: Truck,       title: "35+ Truck Fleet",           titleAr: "أكثر من 35 شاحنة",           desc: "Owned trucks and contractor network ensuring nationwide delivery coverage." },
               { icon: Users,       title: "17-Person Sales Team",      titleAr: "فريق مبيعات من 17 شخصاً",   desc: "Field, tele-sales, and customer service — always available when you need us." },
               { icon: Star,        title: "Trusted Since 2017",        titleAr: "موثوق منذ 2017",              desc: "8 years of building Egypt's HORECA ecosystem, one relationship at a time." },
