@@ -23,10 +23,12 @@ function ProductsContent() {
 
   // Init filters from URL params
   useEffect(() => {
-    const cat   = searchParams.get("category");
-    const brand = searchParams.get("brand");
-    if (cat)   setActiveCategory(cat);
-    if (brand) setActiveBrand(brand);
+    const cat    = searchParams.get("category");
+    const brand  = searchParams.get("brand");
+    const search = searchParams.get("search");
+    if (cat)    setActiveCategory(cat);
+    if (brand)  setActiveBrand(brand);
+    if (search) setSearch(search);
   }, [searchParams]);
 
   // Fetch from Supabase

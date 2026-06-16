@@ -1,70 +1,70 @@
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
+import HomeSearchBar from "@/components/HomeSearchBar";
 import { toProduct } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import {
-  ArrowRight, Package, Search, ShoppingCart, Truck,
-  CheckCircle, TrendingUp, Users, Clock, Star,
-  Droplets, Droplet, Utensils, FlaskConical, GlassWater,
-  Coffee, Wheat, Leaf, Sparkles, TestTube, Salad, Vegan,
-  Bean, Waves, Zap, Beer, Container,
+  ArrowRight, Package, ShoppingCart, Truck,
+  CheckCircle, TrendingUp, Users, Clock, Star, Clock as _Clock,
 } from "lucide-react";
 
-// Always fetch fresh from Supabase — don't statically generate
 export const dynamic = "force-dynamic";
 
-const categoryIcons: Record<string, React.ElementType> = {
-  "Cooking Oil":    Droplets,
-  "Olive Oil":      Droplet,
-  "Pasta":          Utensils,
-  "Tomato Paste":   FlaskConical,
-  "Sauces":         FlaskConical,
-  "Milk":           GlassWater,
-  "Soft Drinks":    Coffee,
-  "Rice":           Wheat,
-  "Seasonings":     Leaf,
-  "Coffee":         Coffee,
-  "Sugar":          Sparkles,
-  "Vinegar":        TestTube,
-  "Olives":         Salad,
-  "Pickles":        Vegan,
-  "Beans":          Bean,
-  "Water":          Droplets,
-  "Tonic Water":    Waves,
-  "BIB Syrup":      Container,
-  "Energy Drinks":  Zap,
-  "Ketchup":        Utensils,
-  "Malt Beverages": Beer,
-  "Speciality":     Star,
-  "Beverages":      GlassWater,
-  "Syrup":          Container,
+// ── Category config (photo + Arabic label) ────────────────────────────────────
+const CATEGORY_CONFIG: Record<string, { photo: string; ar: string }> = {
+  "Cooking Oil":   { photo: "cooking,oil",       ar: "زيت طهي" },
+  "Olive Oil":     { photo: "olive,oil",          ar: "زيت زيتون" },
+  "Pasta":         { photo: "pasta",              ar: "معكرونة" },
+  "Tomato Paste":  { photo: "tomato,sauce",       ar: "صلصة طماطم" },
+  "Sauces":        { photo: "sauce,condiment",    ar: "صوصات" },
+  "Milk":          { photo: "milk,dairy",         ar: "ألبان" },
+  "Soft Drinks":   { photo: "beverages,drinks",   ar: "مشروبات غازية" },
+  "Rice":          { photo: "rice,grain",         ar: "أرز" },
+  "Seasonings":    { photo: "spices,herbs",       ar: "توابل" },
+  "Coffee":        { photo: "coffee,cafe",        ar: "قهوة" },
+  "Water":         { photo: "water,bottle",       ar: "مياه" },
+  "Olives":        { photo: "olives,mediterranean", ar: "زيتون" },
+  "Sugar":         { photo: "sugar,sweet",        ar: "سكر" },
+  "Vinegar":       { photo: "vinegar,bottle",     ar: "خل" },
+  "Ketchup":       { photo: "ketchup,condiment",  ar: "كاتشب" },
+  "Beverages":     { photo: "beverages",          ar: "مشروبات" },
+  "Energy Drinks": { photo: "energy,drink",       ar: "مشروبات طاقة" },
+  "Tonic Water":   { photo: "tonic,water",        ar: "مياه الصودا" },
+  "BIB Syrup":     { photo: "syrup,food",         ar: "شراب" },
+  "Beans":         { photo: "beans,legumes",      ar: "بقوليات" },
+  "Pickles":       { photo: "pickles,jar",        ar: "مخللات" },
 };
 
-const categoryAr: Record<string, string> = {
-  "Olive Oil":    "زيت زيتون",
-  "Cooking Oil":  "زيت طهي",
-  "Vinegar":      "خل",
-  "Tomato Paste": "صلصة طماطم",
-  "Ketchup":      "كاتشب",
-  "Speciality":   "منتجات خاصة",
-  "Beans":        "بقوليات",
-  "Olives":       "زيتون",
-  "Pickles":      "مخللات",
-  "Seasonings":   "توابل",
-  "Sauces":       "صوصات",
-  "Milk":         "ألبان",
-  "Syrup":        "سيرب",
-  "Pasta":        "معكرونة",
-  "Beverages":    "مشروبات",
-  "Soft Drinks":  "مشروبات غازية",
-  "Water":        "مياه",
-  "Rice":         "أرز",
-  "Sugar":        "سكر",
-  "Coffee":       "قهوة",
-};
+// ── Brand partners (hardcoded, styled as logo badges) ─────────────────────────
+const BRAND_PARTNERS = [
+  { name: "Wadi Food",  color: "#1B4D2E" },
+  { name: "Juhayna",    color: "#1565C0" },
+  { name: "Heinz",      color: "#C62828" },
+  { name: "Knorr",      color: "#2E7D32" },
+  { name: "Pepsi",      color: "#1A237E" },
+  { name: "Savola",     color: "#B71C1C" },
+  { name: "Mo Bistro",  color: "#212121" },
+  { name: "Dunkin",     color: "#E65100" },
+  { name: "Costa",      color: "#7B1FA2" },
+  { name: "Wrigley",    color: "#00695C" },
+  { name: "Unilever",   color: "#0D47A1" },
+  { name: "Nestlé",     color: "#4E342E" },
+];
+
+// ── Hero photo grid (9 cells, center = index 4) ───────────────────────────────
+const HERO_PHOTOS = [
+  { kw: "chef,restaurant",      alt: "Chef at restaurant" },
+  { kw: "food,delivery",        alt: "Food delivery" },
+  { kw: "restaurant,kitchen",   alt: "Restaurant kitchen" },
+  { kw: "warehouse,logistics",  alt: "Warehouse" },
+  { kw: "hotel,catering",       alt: "Hotel catering" },  // center (index 4)
+  { kw: "food,products",        alt: "Food products" },
+  { kw: "chef,cooking",         alt: "Chef cooking" },
+  { kw: "restaurant,dining",    alt: "Restaurant dining" },
+  { kw: "cafe,food",            alt: "Cafe" },
+];
 
 export default async function HomePage() {
-  // Fetch directly via supabase client — same pattern as /api/debug which confirmed working
   const [featuredRes, countRes, catRes, brandRes] = await Promise.all([
     supabase.from("products").select("*").eq("is_active", true).order("id").limit(8),
     supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true),
@@ -72,64 +72,99 @@ export default async function HomePage() {
     supabase.from("products").select("brand").eq("is_active", true),
   ]);
 
-  if (featuredRes.error) console.error("homepage featured:", featuredRes.error.message);
-  if (countRes.error)    console.error("homepage count:",    countRes.error.message);
-  if (catRes.error)      console.error("homepage cats:",     catRes.error.message);
-  if (brandRes.error)    console.error("homepage brands:",   brandRes.error.message);
-
   const featured   = (featuredRes.data ?? []).map(toProduct);
   const totalCount = countRes.count ?? 0;
 
-  // Build category counts
   const catMap: Record<string, number> = {};
   (catRes.data ?? []).forEach(({ category }: { category: string }) => {
     catMap[category] = (catMap[category] ?? 0) + 1;
   });
   const categoryCounts = Object.entries(catMap)
     .map(([category, count]) => ({ category, count }))
-    .sort((a, b) => a.category.localeCompare(b.category));
+    .sort((a, b) => b.count - a.count); // sort by count descending
 
-  // Build brand counts
   const brandMap: Record<string, number> = {};
   (brandRes.data ?? []).forEach(({ brand }: { brand: string }) => {
     brandMap[brand] = (brandMap[brand] ?? 0) + 1;
   });
-  const brandCounts = Object.entries(brandMap)
-    .map(([brand, count]) => ({ brand, count }))
-    .sort((a, b) => a.brand.localeCompare(b.brand));
+  const brandCounts = Object.entries(brandMap).length;
 
   return (
     <>
-      {/* ── HERO ─────────────────────────────────────────────────── */}
-      <section className="bg-[#1B4D2E] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white/80 text-xs font-medium uppercase tracking-widest px-3 py-1.5 rounded-full mb-6">
-              <span className="w-1.5 h-1.5 bg-white rounded-full" />
-              HORECA Distribution · Egypt
+      {/* ── CSS animations ───────────────────────────────────────────────── */}
+      <style>{`
+        @keyframes brand-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .brand-scroll-track { animation: brand-scroll 28s linear infinite; }
+        .brand-scroll-track:hover { animation-play-state: paused; }
+      `}</style>
+
+      {/* ── HERO — mosaic photo grid ──────────────────────────────────────── */}
+      <section className="relative h-[480px] sm:h-[560px] overflow-hidden">
+        {/* 3×3 photo grid as background */}
+        <div className="absolute inset-0 grid grid-cols-3 grid-rows-3">
+          {HERO_PHOTOS.map((photo, i) => (
+            <div key={i} className="relative overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://source.unsplash.com/400x400/?${photo.kw}`}
+                alt={photo.alt}
+                className="w-full h-full object-cover"
+                loading={i < 3 ? "eager" : "lazy"}
+              />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4">
-              Your Trusted Supply Partner for Egypt&apos;s HORECA Sector
-            </h1>
-            <p className="text-white/70 text-base md:text-lg mb-2 leading-relaxed">
-              {totalCount} products across {brandCounts.length} top brands — delivered to your door across Egypt.
-            </p>
-            <p className="text-white/50 text-sm mb-10" dir="rtl">
-              {totalCount} منتج من {brandCounts.length} علامات تجارية — توصيل لجميع أنحاء مصر
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/products" className="inline-flex items-center justify-center gap-2 bg-white text-[#1B4D2E] font-semibold px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors text-sm">
-                Browse Products <ArrowRight size={16} />
-              </Link>
-              <Link href="/contact" className="inline-flex items-center justify-center gap-2 border border-white/30 text-white font-medium px-6 py-3 rounded-lg hover:border-white hover:bg-white/10 transition-colors text-sm">
-                Get in Touch
-              </Link>
-            </div>
+          ))}
+        </div>
+
+        {/* Radial dark-green overlay — darkest at center for text legibility */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 65% 75% at 50% 50%, rgba(27,77,46,0.93) 0%, rgba(27,77,46,0.65) 55%, rgba(10,30,18,0.45) 100%)",
+          }}
+        />
+
+        {/* Hero content centered */}
+        <div className="relative z-10 h-full flex flex-col items-center justify-center text-white text-center px-4 sm:px-6">
+          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white/80 text-xs font-semibold uppercase tracking-widest px-3 py-1.5 rounded-full mb-5">
+            <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+            HORECA Distribution · Egypt
+          </div>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-3 max-w-2xl drop-shadow-lg">
+            Your Trusted Supply Partner for Egypt&apos;s HORECA Sector
+          </h1>
+          <p className="text-white/70 text-base mb-1 max-w-xl leading-relaxed">
+            {totalCount} products across {brandCounts} top brands — delivered across Cairo &amp; Giza.
+          </p>
+          <p className="text-white/50 text-sm mb-8" dir="rtl">
+            شريكك الموثوق في توريد احتياجات قطاع الضيافة في مصر
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/products"
+              className="inline-flex items-center justify-center gap-2 bg-white text-[#1B4D2E] font-bold px-7 py-3 rounded-xl hover:bg-gray-50 transition-colors text-sm shadow-lg"
+            >
+              Browse Products <ArrowRight size={15} />
+            </Link>
+            <Link
+              href="/contact"
+              className="inline-flex items-center justify-center gap-2 border border-white/40 text-white font-medium px-7 py-3 rounded-xl hover:border-white hover:bg-white/10 transition-colors text-sm"
+            >
+              Get in Touch
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* ── STATS STRIP ──────────────────────────────────────────── */}
+      {/* ── SEARCH BAR ───────────────────────────────────────────────────── */}
+      <section className="bg-white border-b border-gray-100 py-6 px-4 shadow-sm">
+        <HomeSearchBar />
+      </section>
+
+      {/* ── STATS STRIP ──────────────────────────────────────────────────── */}
       <section className="bg-[#F7F7F5] border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
@@ -149,64 +184,105 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── CATEGORY GRID ────────────────────────────────────────── */}
-      <section className="bg-white py-16">
+      {/* ── CATEGORIES — photo cards ──────────────────────────────────────── */}
+      <section className="bg-white py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-[#111111]">Shop by Category</h2>
             <p className="text-gray-400 text-sm mt-0.5" dir="rtl">تسوق حسب الفئة</p>
           </div>
-          {categoryCounts.length === 0 ? (
-            <p className="text-gray-400 text-sm">No categories available yet.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-              {categoryCounts.map(({ category, count }) => {
-                const Icon = categoryIcons[category] ?? Package;
-                const ar   = categoryAr[category] ?? category;
-                return (
-                  <Link
-                    key={category}
-                    href={`/products?category=${encodeURIComponent(category)}`}
-                    className="group flex flex-col items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:border-[#1B4D2E] hover:shadow-sm transition-all text-center"
-                  >
-                    <div className="w-14 h-14 rounded-full bg-[#E8F5E9] flex items-center justify-center flex-shrink-0 group-hover:bg-[#1B4D2E] transition-colors">
-                      <Icon size={32} strokeWidth={1.5} className="text-[#1B4D2E] group-hover:text-white transition-colors" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-xs text-[#111111] leading-tight">{category}</p>
-                      <p className="text-[#6B7280] text-xs mt-0.5" dir="rtl">{ar}</p>
-                      <span className="inline-block mt-1.5 bg-[#1B4D2E] text-white text-xs font-semibold px-2 py-0.5 rounded-full">{count}</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {categoryCounts.map(({ category, count }) => {
+              const cfg = CATEGORY_CONFIG[category];
+              const photoUrl = cfg
+                ? `https://source.unsplash.com/300x300/?${cfg.photo}`
+                : `https://source.unsplash.com/300x300/?food,ingredient`;
+              const arLabel = cfg?.ar ?? category;
+              return (
+                <Link
+                  key={category}
+                  href={`/products?category=${encodeURIComponent(category)}`}
+                  className="group relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-[1.04]"
+                >
+                  {/* Background photo */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoUrl}
+                    alt={category}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  {/* Dark gradient overlay at bottom */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  {/* Product count badge top-right */}
+                  <span className="absolute top-2.5 right-2.5 bg-[#1B4D2E] text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {count}
+                  </span>
+                  {/* Category name at bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <p className="text-white font-bold text-xs sm:text-sm leading-tight drop-shadow">{category}</p>
+                    <p className="text-white/70 text-xs mt-0.5" dir="rtl">{arLabel}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ─────────────────────────────────────────── */}
-      <section className="bg-[#F7F7F5] py-16 border-t border-gray-100">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-10">
-            <h2 className="text-2xl font-bold text-[#111111]">How It Works</h2>
-            <p className="text-gray-400 text-sm mt-0.5" dir="rtl">كيف يعمل</p>
+      {/* ── BRAND PARTNERS STRIP — auto-scrolling ────────────────────────── */}
+      <section className="bg-white border-t border-b border-gray-100 py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 text-center">
+          <h2 className="text-lg font-bold text-[#111111]">Our Brand Partners</h2>
+          <p className="text-gray-400 text-xs mt-0.5" dir="rtl">علاماتنا التجارية</p>
+        </div>
+        <div className="overflow-hidden">
+          <div className="flex gap-4 w-max brand-scroll-track">
+            {[...BRAND_PARTNERS, ...BRAND_PARTNERS].map((b, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-center w-[140px] h-[56px] rounded-full text-white text-sm font-bold flex-shrink-0 shadow-sm"
+                style={{ backgroundColor: b.color }}
+              >
+                {b.name}
+              </div>
+            ))}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+        </div>
+      </section>
+
+      {/* ── WHY ORDER ONLINE ─────────────────────────────────────────────── */}
+      <section className="bg-[#F7F7F5] py-14 border-t border-gray-100">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 text-center">
+            <h2 className="text-2xl font-bold text-[#111111]">Why Order Online?</h2>
+            <p className="text-gray-400 text-sm mt-0.5" dir="rtl">لماذا تطلب عبر الإنترنت؟</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {[
-              { step: "01", icon: Search,       title: "Browse",  titleAr: "تصفح",  desc: `Explore ${totalCount} products across ${brandCounts.length} top HORECA brands. Filter by category or brand.` },
-              { step: "02", icon: ShoppingCart, title: "Order",   titleAr: "اطلب",  desc: "Add items to your cart and submit your order. Credit pricing, ex-VAT." },
-              { step: "03", icon: Truck,        title: "Receive", titleAr: "استلم", desc: "We process same-day and deliver across Egypt via our fleet of 35+ trucks." },
-            ].map(({ step, icon: Icon, title, titleAr, desc }) => (
-              <div key={step} className="flex flex-col">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-[#1B4D2E] rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Icon size={22} className="text-white" />
-                  </div>
-                  <span className="text-xs font-bold text-[#1B4D2E] uppercase tracking-widest">{step}</span>
-                </div>
-                <h3 className="text-lg font-bold text-[#111111] mb-0.5">{title}</h3>
-                <p className="text-gray-400 text-xs mb-2" dir="rtl">{titleAr}</p>
+              {
+                emoji: "🕐",
+                title:    "Order Anytime",
+                titleAr:  "اطلب في أي وقت",
+                desc:     "24/7 online ordering, delivered within 24–48 hours across Cairo and Giza.",
+              },
+              {
+                emoji: "📦",
+                title:    "Carton Pricing",
+                titleAr:  "أسعار الكرتونة",
+                desc:     "Transparent B2B carton prices, minimum 1 carton per SKU, no hidden fees.",
+              },
+              {
+                emoji: "🚚",
+                title:    "Cairo & Giza Delivery",
+                titleAr:  "توصيل القاهرة والجيزة",
+                desc:     "Fast, reliable delivery across Cairo and Giza via our 35+ truck fleet.",
+              },
+            ].map(({ emoji, title, titleAr, desc }) => (
+              <div key={title} className="bg-white border border-gray-200 rounded-2xl p-6 text-center hover:border-[#1B4D2E] hover:shadow-sm transition-all">
+                <div className="text-4xl mb-4">{emoji}</div>
+                <h3 className="font-bold text-[#111111] mb-0.5">{title}</h3>
+                <p className="text-xs text-gray-400 mb-3" dir="rtl">{titleAr}</p>
                 <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
@@ -214,37 +290,43 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── FEATURED PRODUCTS ────────────────────────────────────── */}
+      {/* ── FEATURED PRODUCTS ────────────────────────────────────────────── */}
       <section className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-[#111111]">Featured Products</h2>
-              <p className="text-gray-400 text-sm mt-0.5" dir="rtl">منتجات مختارة</p>
+              <h2 className="text-3xl font-bold text-[#111111] leading-tight">Featured Products</h2>
+              <p className="text-gray-400 text-sm mt-1" dir="rtl">منتجات مختارة</p>
             </div>
-            <Link href="/products" className="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-[#1B4D2E] hover:underline">
+            <Link
+              href="/products"
+              className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#1B4D2E] hover:underline"
+            >
               View all {totalCount} <ArrowRight size={15} />
             </Link>
           </div>
           {featured.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <Package size={32} className="mx-auto mb-3 text-gray-200" />
-              <p className="text-sm">No products yet — run <code className="font-mono bg-gray-100 px-1 rounded text-xs">npm run seed</code> to populate the catalog.</p>
+              <p className="text-sm">No products yet.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {featured.map((p) => <ProductCard key={p.id} product={p} />)}
             </div>
           )}
-          <div className="mt-6 text-center sm:hidden">
-            <Link href="/products" className="inline-flex items-center gap-1 text-sm font-medium text-[#1B4D2E] hover:underline">
-              View All Products <ArrowRight size={15} />
+          <div className="mt-10 text-center">
+            <Link
+              href="/products"
+              className="inline-flex items-center gap-2 bg-[#1B4D2E] text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-[#163d24] transition-colors text-sm shadow-md"
+            >
+              View All Products <ArrowRight size={16} />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ── WHY MASS DISTRIBUTION ────────────────────────────────── */}
+      {/* ── WHY MASS DISTRIBUTION ────────────────────────────────────────── */}
       <section className="bg-[#F7F7F5] border-t border-gray-100 py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-10">
@@ -253,12 +335,12 @@ export default async function HomePage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { icon: CheckCircle, title: "100% HORECA Focused",      titleAr: "متخصصون في الضيافة",                        desc: "Every product and service is designed specifically for hotels, restaurants, and cafés." },
-              { icon: TrendingUp,  title: "Strong Annual Growth",      titleAr: "نمو سنوي قوي",                              desc: "Consistent year-on-year growth backed by deep operator relationships across Egypt." },
-              { icon: Package,     title: `${brandCounts.length} Brands, ${totalCount} Products`, titleAr: `${brandCounts.length} علامات تجارية`, desc: "All your HORECA essentials from one trusted distribution partner." },
-              { icon: Truck,       title: "35+ Truck Fleet",           titleAr: "أكثر من 35 شاحنة",                          desc: "Owned trucks and contractor network ensuring nationwide delivery coverage." },
-              { icon: Users,       title: "17-Person Sales Team",      titleAr: "فريق مبيعات من 17 شخصاً",                   desc: "Field, tele-sales, and customer service — always available when you need us." },
-              { icon: Star,        title: "Trusted Since 2017",        titleAr: "موثوق منذ 2017",                             desc: "8 years of building Egypt's HORECA ecosystem, one relationship at a time." },
+              { icon: CheckCircle, title: "100% HORECA Focused",      titleAr: "متخصصون في الضيافة",         desc: "Every product and service is designed specifically for hotels, restaurants, and cafés." },
+              { icon: TrendingUp,  title: "Strong Annual Growth",      titleAr: "نمو سنوي قوي",               desc: "Consistent year-on-year growth backed by deep operator relationships across Egypt." },
+              { icon: Package,     title: `${brandCounts} Brands, ${totalCount} Products`, titleAr: `${brandCounts} علامات تجارية`, desc: "All your HORECA essentials from one trusted distribution partner." },
+              { icon: Truck,       title: "35+ Truck Fleet",           titleAr: "أكثر من 35 شاحنة",           desc: "Owned trucks and contractor network ensuring nationwide delivery coverage." },
+              { icon: Users,       title: "17-Person Sales Team",      titleAr: "فريق مبيعات من 17 شخصاً",   desc: "Field, tele-sales, and customer service — always available when you need us." },
+              { icon: Star,        title: "Trusted Since 2017",        titleAr: "موثوق منذ 2017",              desc: "8 years of building Egypt's HORECA ecosystem, one relationship at a time." },
             ].map(({ icon: Icon, title, titleAr, desc }) => (
               <div key={title} className="bg-white border border-gray-200 rounded-xl p-5 hover:border-[#1B4D2E] hover:shadow-sm transition-all">
                 <div className="flex items-start gap-3">
@@ -277,34 +359,23 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── BRANDS STRIP ─────────────────────────────────────────── */}
-      <section className="bg-white border-t border-gray-100 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">Our Brand Partners · العلامات التجارية</p>
-          <div className="flex flex-wrap gap-2">
-            {brandCounts.map(({ brand, count }) => (
-              <Link key={brand} href={`/products?brand=${encodeURIComponent(brand)}`}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-medium hover:border-[#1B4D2E] hover:text-[#1B4D2E] transition-all"
-              >
-                {brand}
-                <span className="text-xs text-gray-400">{count}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA ──────────────────────────────────────────────────── */}
+      {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <section className="bg-[#1B4D2E] text-white py-16">
         <div className="max-w-3xl mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-3">Ready to grow your business?</h2>
           <p className="text-white/60 text-sm mb-2" dir="rtl">هل أنت مستعد لتنمية أعمالك؟</p>
           <p className="text-white/70 mb-8 text-base">800+ clients. 4,000+ touchpoints. Nationwide reach across Egypt.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/products" className="inline-flex items-center justify-center gap-2 bg-white text-[#1B4D2E] font-semibold px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors text-sm">
+            <Link
+              href="/products"
+              className="inline-flex items-center justify-center gap-2 bg-white text-[#1B4D2E] font-semibold px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors text-sm"
+            >
               Browse Products <ArrowRight size={16} />
             </Link>
-            <Link href="/contact" className="inline-flex items-center justify-center gap-2 border border-white/30 text-white font-medium px-6 py-3 rounded-lg hover:border-white hover:bg-white/10 transition-colors text-sm">
+            <Link
+              href="/contact"
+              className="inline-flex items-center justify-center gap-2 border border-white/30 text-white font-medium px-6 py-3 rounded-lg hover:border-white hover:bg-white/10 transition-colors text-sm"
+            >
               Contact Us
             </Link>
           </div>
