@@ -4,64 +4,66 @@ import HomeSearchBar from "@/components/HomeSearchBar";
 import { toProduct } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import {
-  ArrowRight, Package, ShoppingCart, Truck,
-  CheckCircle, TrendingUp, Users, Clock, Star, Clock as _Clock,
+  ArrowRight, Package, Truck,
+  CheckCircle, TrendingUp, Users, Clock, Star,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-// ── Category config (photo + Arabic label) ────────────────────────────────────
+// ── Category config (direct Unsplash URLs + Arabic label) ────────────────────
 const CATEGORY_CONFIG: Record<string, { photo: string; ar: string }> = {
-  "Cooking Oil":   { photo: "cooking,oil",       ar: "زيت طهي" },
-  "Olive Oil":     { photo: "olive,oil",          ar: "زيت زيتون" },
-  "Pasta":         { photo: "pasta",              ar: "معكرونة" },
-  "Tomato Paste":  { photo: "tomato,sauce",       ar: "صلصة طماطم" },
-  "Sauces":        { photo: "sauce,condiment",    ar: "صوصات" },
-  "Milk":          { photo: "milk,dairy",         ar: "ألبان" },
-  "Soft Drinks":   { photo: "beverages,drinks",   ar: "مشروبات غازية" },
-  "Rice":          { photo: "rice,grain",         ar: "أرز" },
-  "Seasonings":    { photo: "spices,herbs",       ar: "توابل" },
-  "Coffee":        { photo: "coffee,cafe",        ar: "قهوة" },
-  "Water":         { photo: "water,bottle",       ar: "مياه" },
-  "Olives":        { photo: "olives,mediterranean", ar: "زيتون" },
-  "Sugar":         { photo: "sugar,sweet",        ar: "سكر" },
-  "Vinegar":       { photo: "vinegar,bottle",     ar: "خل" },
-  "Ketchup":       { photo: "ketchup,condiment",  ar: "كاتشب" },
-  "Beverages":     { photo: "beverages",          ar: "مشروبات" },
-  "Energy Drinks": { photo: "energy,drink",       ar: "مشروبات طاقة" },
-  "Tonic Water":   { photo: "tonic,water",        ar: "مياه الصودا" },
-  "BIB Syrup":     { photo: "syrup,food",         ar: "شراب" },
-  "Beans":         { photo: "beans,legumes",      ar: "بقوليات" },
-  "Pickles":       { photo: "pickles,jar",        ar: "مخللات" },
+  "Soft Drinks":   { photo: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=300&h=300&fit=crop", ar: "مشروبات غازية" },
+  "Cooking Oil":   { photo: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=300&h=300&fit=crop", ar: "زيت طهي" },
+  "Olive Oil":     { photo: "https://images.unsplash.com/photo-1550411294-25b20cb4b977?w=300&h=300&fit=crop", ar: "زيت زيتون" },
+  "Pasta":         { photo: "https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=300&h=300&fit=crop", ar: "معكرونة" },
+  "Tomato Paste":  { photo: "https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=300&h=300&fit=crop", ar: "صلصة طماطم" },
+  "Sauces":        { photo: "https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=300&h=300&fit=crop", ar: "صوصات" },
+  "Milk":          { photo: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&h=300&fit=crop", ar: "ألبان" },
+  "Rice":          { photo: "https://images.unsplash.com/photo-1536304993881-ff86e0c9d60?w=300&h=300&fit=crop", ar: "أرز" },
+  "Seasonings":    { photo: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=300&h=300&fit=crop", ar: "توابل" },
+  "Coffee":        { photo: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=300&h=300&fit=crop", ar: "قهوة" },
+  "Water":         { photo: "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=300&h=300&fit=crop", ar: "مياه" },
+  "Olives":        { photo: "https://images.unsplash.com/photo-1611843467160-25afb8df1074?w=300&h=300&fit=crop", ar: "زيتون" },
+  "Pickles":       { photo: "https://images.unsplash.com/photo-1589621316382-008455b857cd?w=300&h=300&fit=crop", ar: "مخللات" },
+  "Vinegar":       { photo: "https://images.unsplash.com/photo-1585237672814-8f85a8118bf6?w=300&h=300&fit=crop", ar: "خل" },
+  "Beans":         { photo: "https://images.unsplash.com/photo-1515543904379-3d757afe72e4?w=300&h=300&fit=crop", ar: "بقوليات" },
+  "Energy Drinks": { photo: "https://images.unsplash.com/photo-1622543925917-763c34d1a86e?w=300&h=300&fit=crop", ar: "مشروبات طاقة" },
+  "Tonic Water":   { photo: "https://images.unsplash.com/photo-1559181567-c3190900d8be?w=300&h=300&fit=crop", ar: "مياه الصودا" },
+  "Speciality":    { photo: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=300&h=300&fit=crop", ar: "منتجات خاصة" },
+  "Sugar":         { photo: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=300&h=300&fit=crop", ar: "سكر" },
+  "Ketchup":       { photo: "https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=300&h=300&fit=crop", ar: "كاتشب" },
+  "Beverages":     { photo: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=300&h=300&fit=crop", ar: "مشروبات" },
+  "BIB Syrup":     { photo: "https://images.unsplash.com/photo-1559181567-c3190900d8be?w=300&h=300&fit=crop", ar: "شراب" },
 };
 
-// ── Brand partners (hardcoded, styled as logo badges) ─────────────────────────
+// ── Brand partners — 13 confirmed brands ─────────────────────────────────────
 const BRAND_PARTNERS = [
-  { name: "Wadi Food",  color: "#1B4D2E" },
-  { name: "Juhayna",    color: "#1565C0" },
-  { name: "Heinz",      color: "#C62828" },
-  { name: "Knorr",      color: "#2E7D32" },
-  { name: "Pepsi",      color: "#1A237E" },
-  { name: "Savola",     color: "#B71C1C" },
-  { name: "Mo Bistro",  color: "#212121" },
-  { name: "Dunkin",     color: "#E65100" },
-  { name: "Costa",      color: "#7B1FA2" },
-  { name: "Wrigley",    color: "#00695C" },
-  { name: "Unilever",   color: "#0D47A1" },
-  { name: "Nestlé",     color: "#4E342E" },
+  { name: "Wadi Food", color: "#1B4D2E",  text: "#fff" },
+  { name: "Juhayna",   color: "#0066B3",  text: "#fff" },
+  { name: "Heinz",     color: "#CC1C16",  text: "#fff" },
+  { name: "Knorr",     color: "#4CAF50",  text: "#fff" },
+  { name: "Pepsi",     color: "#004B93",  text: "#fff" },
+  { name: "Savola",    color: "#E31E24",  text: "#fff" },
+  { name: "Unilever",  color: "#1F36C7",  text: "#fff" },
+  { name: "Nestlé",    color: "#009DE0",  text: "#fff" },
+  { name: "Sunshine",  color: "#F5A623",  text: "#fff" },
+  { name: "DaVinci",   color: "#8B0000",  text: "#fff" },
+  { name: "El Doha",   color: "#1B4D2E",  text: "#fff" },
+  { name: "AddMe",     color: "#FF4500",  text: "#fff" },
+  { name: "Lipton",    color: "#FFD700",  text: "#333" },
 ];
 
-// ── Hero photo grid (9 cells, center = index 4) ───────────────────────────────
+// ── Hero photo grid (9 cells, direct Unsplash URLs) ───────────────────────────
 const HERO_PHOTOS = [
-  { kw: "chef,restaurant",      alt: "Chef at restaurant" },
-  { kw: "food,delivery",        alt: "Food delivery" },
-  { kw: "restaurant,kitchen",   alt: "Restaurant kitchen" },
-  { kw: "warehouse,logistics",  alt: "Warehouse" },
-  { kw: "hotel,catering",       alt: "Hotel catering" },  // center (index 4)
-  { kw: "food,products",        alt: "Food products" },
-  { kw: "chef,cooking",         alt: "Chef cooking" },
-  { kw: "restaurant,dining",    alt: "Restaurant dining" },
-  { kw: "cafe,food",            alt: "Cafe" },
+  { url: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop", alt: "Restaurant kitchen" },
+  { url: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=400&fit=crop", alt: "Plated food" },
+  { url: "https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=400&h=400&fit=crop", alt: "Chef cooking" },
+  { url: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=400&fit=crop", alt: "Food spread" },
+  { url: "https://images.unsplash.com/photo-1493770348161-369560ae357d?w=400&h=400&fit=crop", alt: "Healthy food" },
+  { url: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop", alt: "Food hero" },
+  { url: "https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?w=400&h=400&fit=crop", alt: "Professional chef" },
+  { url: "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=400&h=400&fit=crop", alt: "Restaurant bar" },
+  { url: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=400&fit=crop", alt: "Burger" },
 ];
 
 export default async function HomePage() {
@@ -109,7 +111,7 @@ export default async function HomePage() {
             <div key={i} className="relative overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`https://source.unsplash.com/400x400/?${photo.kw}`}
+                src={photo.url}
                 alt={photo.alt}
                 className="w-full h-full object-cover"
                 loading={i < 3 ? "eager" : "lazy"}
@@ -194,9 +196,8 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {categoryCounts.map(({ category, count }) => {
               const cfg = CATEGORY_CONFIG[category];
-              const photoUrl = cfg
-                ? `https://source.unsplash.com/300x300/?${cfg.photo}`
-                : `https://source.unsplash.com/300x300/?food,ingredient`;
+              const photoUrl = cfg?.photo
+                ?? "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=300&h=300&fit=crop";
               const arLabel = cfg?.ar ?? category;
               return (
                 <Link
@@ -237,14 +238,15 @@ export default async function HomePage() {
           <p className="text-gray-400 text-xs mt-0.5" dir="rtl">علاماتنا التجارية</p>
         </div>
         <div className="overflow-hidden">
-          <div className="flex gap-4 w-max brand-scroll-track">
+          <div className="flex gap-4 w-max brand-scroll-track px-4">
             {[...BRAND_PARTNERS, ...BRAND_PARTNERS].map((b, i) => (
               <div
                 key={i}
-                className="flex items-center justify-center w-[140px] h-[56px] rounded-full text-white text-sm font-bold flex-shrink-0 shadow-sm"
-                style={{ backgroundColor: b.color }}
+                className="flex items-center justify-center w-[160px] h-[72px] rounded-xl bg-white border border-gray-200 hover:border-[#1B4D2E] hover:shadow-md transition-all flex-shrink-0 cursor-default"
               >
-                {b.name}
+                <span className="text-sm font-bold" style={{ color: b.color }}>
+                  {b.name}
+                </span>
               </div>
             ))}
           </div>
@@ -261,26 +263,28 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {[
               {
-                emoji: "🕐",
-                title:    "Order Anytime",
-                titleAr:  "اطلب في أي وقت",
-                desc:     "24/7 online ordering, delivered within 24–48 hours across Cairo and Giza.",
+                icon:    Clock,
+                title:   "Order Anytime",
+                titleAr: "اطلب في أي وقت",
+                desc:    "24/7 online ordering, delivered within 24–48 hours across Cairo and Giza.",
               },
               {
-                emoji: "📦",
-                title:    "Carton Pricing",
-                titleAr:  "أسعار الكرتونة",
-                desc:     "Transparent B2B carton prices, minimum 1 carton per SKU, no hidden fees.",
+                icon:    Package,
+                title:   "Carton Pricing",
+                titleAr: "أسعار الكرتونة",
+                desc:    "Transparent B2B carton prices, minimum 1 carton per SKU, no hidden fees.",
               },
               {
-                emoji: "🚚",
-                title:    "Cairo & Giza Delivery",
-                titleAr:  "توصيل القاهرة والجيزة",
-                desc:     "Fast, reliable delivery across Cairo and Giza via our 35+ truck fleet.",
+                icon:    Truck,
+                title:   "Cairo & Giza Delivery",
+                titleAr: "توصيل القاهرة والجيزة",
+                desc:    "Fast, reliable delivery across Cairo and Giza within 24–48 hours.",
               },
-            ].map(({ emoji, title, titleAr, desc }) => (
+            ].map(({ icon: Icon, title, titleAr, desc }) => (
               <div key={title} className="bg-white border border-gray-200 rounded-2xl p-6 text-center hover:border-[#1B4D2E] hover:shadow-sm transition-all">
-                <div className="text-4xl mb-4">{emoji}</div>
+                <div className="w-16 h-16 bg-[#E8F5E9] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Icon size={32} className="text-[#1B4D2E]" />
+                </div>
                 <h3 className="font-bold text-[#111111] mb-0.5">{title}</h3>
                 <p className="text-xs text-gray-400 mb-3" dir="rtl">{titleAr}</p>
                 <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
