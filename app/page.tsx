@@ -11,30 +11,30 @@ import {
 export const dynamic = "force-dynamic";
 
 // ── Category config (direct Unsplash URLs + Arabic label) ────────────────────
-const CATEGORY_CONFIG: Record<string, { photo: string; ar: string }> = {
-  "Soft Drinks":     { photo: "https://images.unsplash.com/photo-1624552184280-9e31f7f5bbfa?w=300&h=300&fit=crop", ar: "مشروبات غازية" },
-  "Cooking Oil":     { photo: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=300&h=300&fit=crop", ar: "زيت طهي" },
-  "Olive Oil":       { photo: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=300&h=300&fit=crop", ar: "زيت زيتون" },
-  "Pasta":           { photo: "https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=300&h=300&fit=crop", ar: "معكرونة" },
-  "Tomato Paste":    { photo: "https://images.unsplash.com/photo-1549007953-2f2dc0b24019?w=300&h=300&fit=crop", ar: "صلصة طماطم" },
-  "Sauces":          { photo: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=300&h=300&fit=crop", ar: "صوصات" },
-  "Milk":            { photo: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&h=300&fit=crop", ar: "ألبان" },
-  "Rice":            { photo: "https://images.unsplash.com/photo-1536304993881-ff86e0c9d60?w=300&h=300&fit=crop", ar: "أرز" },
-  "Seasonings":      { photo: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=300&h=300&fit=crop", ar: "توابل" },
-  "Coffee":          { photo: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=300&h=300&fit=crop", ar: "قهوة" },
-  "Water":           { photo: "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=300&h=300&fit=crop", ar: "مياه" },
-  "Olives":          { photo: "https://images.unsplash.com/photo-1593001872095-7d5b3868fb1d?w=300&h=300&fit=crop", ar: "زيتون" },
-  "Pickles":         { photo: "https://images.unsplash.com/photo-1601000938259-4f8afe31f7ff?w=300&h=300&fit=crop", ar: "مخللات" },
-  "Vinegar":         { photo: "https://images.unsplash.com/photo-1528750997573-59b89d56f4f7?w=300&h=300&fit=crop", ar: "خل" },
-  "Beans":           { photo: "https://images.unsplash.com/photo-1515543904379-3d757afe72e4?w=300&h=300&fit=crop", ar: "بقوليات" },
-  "Energy Drinks":   { photo: "https://images.unsplash.com/photo-1606168094336-48f205522f2d?w=300&h=300&fit=crop", ar: "مشروبات طاقة" },
-  "Tonic Water":     { photo: "https://images.unsplash.com/photo-1559181567-c3190900d8be?w=300&h=300&fit=crop", ar: "مياه الصودا" },
-  "Malt Beverages":  { photo: "https://images.unsplash.com/photo-1618183479302-1e0aa382c36b?w=300&h=300&fit=crop", ar: "مشروبات مالت" },
-  "Speciality":      { photo: "https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=300&h=300&fit=crop", ar: "منتجات خاصة" },
-  "Sugar":           { photo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop", ar: "سكر" },
-  "Ketchup":         { photo: "https://images.unsplash.com/photo-1607013407627-6352b8ec6456?w=300&h=300&fit=crop", ar: "كاتشب" },
-  "Beverages":       { photo: "https://images.unsplash.com/photo-1624552184280-9e31f7f5bbfa?w=300&h=300&fit=crop", ar: "مشروبات" },
-  "BIB Syrup":       { photo: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=300&h=300&fit=crop", ar: "شراب" },
+const CATEGORY_CONFIG: Record<string, { photo: string; ar: string; hidden?: boolean }> = {
+  "Soft Drinks":    { photo: "https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=300&h=300&fit=crop", ar: "مشروبات غازية" },
+  "Cooking Oil":    { photo: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=300&h=300&fit=crop", ar: "زيت طهي" },
+  "Olive Oil":      { photo: "https://images.unsplash.com/photo-1542990253-a781e5508878?w=300&h=300&fit=crop", ar: "زيت زيتون" },
+  "Pasta":          { photo: "https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=300&h=300&fit=crop", ar: "معكرونة" },
+  "Tomato Paste":   { photo: "https://images.unsplash.com/photo-1606914501449-5a96b6ce24ca?w=300&h=300&fit=crop", ar: "صلصة طماطم" },
+  "Sauces":         { photo: "https://images.unsplash.com/photo-1607631568010-a87245c0daf8?w=300&h=300&fit=crop", ar: "صوصات" },
+  "Milk":           { photo: "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=300&h=300&fit=crop", ar: "ألبان" },
+  "Rice":           { photo: "https://images.unsplash.com/photo-1568347355280-d33fdf77d42a?w=300&h=300&fit=crop", ar: "أرز" },
+  "Seasonings":     { photo: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=300&h=300&fit=crop", ar: "توابل" },
+  "Coffee":         { photo: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=300&h=300&fit=crop", ar: "قهوة" },
+  "Water":          { photo: "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=300&h=300&fit=crop", ar: "مياه" },
+  "Olives":         { photo: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=300&h=300&fit=crop", ar: "زيتون" },
+  "Pickles":        { photo: "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?w=300&h=300&fit=crop", ar: "مخللات" },
+  "Vinegar":        { photo: "https://images.unsplash.com/photo-1526434426615-1abe81efcb0b?w=300&h=300&fit=crop", ar: "خل" },
+  "Beans":          { photo: "https://images.unsplash.com/photo-1610725664285-7c57e6eeac3f?w=300&h=300&fit=crop", ar: "بقوليات" },
+  "Energy Drinks":  { photo: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&h=300&fit=crop", ar: "مشروبات طاقة" },
+  "Tonic Water":    { photo: "https://images.unsplash.com/photo-1551538827-9c037cb4f32a?w=300&h=300&fit=crop", ar: "مياه الصودا" },
+  "Malt Beverages": { photo: "https://images.unsplash.com/photo-1571613316887-6f8d5cbf7ef7?w=300&h=300&fit=crop", ar: "مشروبات مالت" },
+  "Speciality":     { photo: "https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=300&h=300&fit=crop", ar: "منتجات خاصة" },
+  "Sugar":          { photo: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=300&h=300&fit=crop", ar: "سكر" },
+  "Ketchup":        { photo: "https://images.unsplash.com/photo-1558818498-28c1e002b655?w=300&h=300&fit=crop", ar: "كاتشب" },
+  "Beverages":      { photo: "https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=300&h=300&fit=crop", ar: "مشروبات" },
+  "BIB Syrup":      { photo: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=300&h=300&fit=crop", ar: "شراب", hidden: true },
 };
 
 // ── Brand partners — 13 confirmed brands ─────────────────────────────────────
@@ -240,7 +240,7 @@ export default async function HomePage() {
             <p className="text-gray-400 text-sm mt-0.5" dir="rtl">تسوق حسب الفئة</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {categoryCounts.map(({ category, count }) => {
+            {categoryCounts.filter(({ category }) => !CATEGORY_CONFIG[category]?.hidden).map(({ category, count }) => {
               const cfg = CATEGORY_CONFIG[category];
               const photoUrl = cfg?.photo
                 ?? "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=300&fit=crop";
