@@ -38,19 +38,19 @@ const CATEGORY_CONFIG: Record<string, { photo: string; ar: string }> = {
 
 // ── Brand partners — 13 confirmed brands ─────────────────────────────────────
 const BRAND_PARTNERS = [
-  { name: "Wadi Food", color: "#1B4D2E" },
-  { name: "Juhayna",   color: "#0066B3" },
-  { name: "Heinz",     color: "#CC1C16" },
-  { name: "Knorr",     color: "#4CAF50" },
-  { name: "Pepsi",     color: "#004B93" },
-  { name: "Savola",    color: "#E31E24" },
-  { name: "Unilever",  color: "#1F36C7" },
-  { name: "Nestlé",    color: "#009DE0" },
-  { name: "Sunshine",  color: "#D4850A" },
-  { name: "DaVinci",   color: "#8B0000" },
-  { name: "El Doha",   color: "#1B4D2E" },
-  { name: "AddMe",     color: "#FF4500" },
-  { name: "Lipton",    color: "#AA7700" },
+  { name: "Wadi Food", logo: "/brand-logos/wadi-food.png" },
+  { name: "Juhayna",   logo: "/brand-logos/juhayna.png"   },
+  { name: "Heinz",     logo: "/brand-logos/heinz.png"     },
+  { name: "Knorr",     logo: "/brand-logos/knorr.png"     },
+  { name: "Pepsi",     logo: "/brand-logos/pepsi.png"     },
+  { name: "Savola",    logo: "/brand-logos/savola.png"    },
+  { name: "Unilever",  logo: "/brand-logos/unilever.png"  },
+  { name: "Nestlé",    logo: "/brand-logos/nestle.png"    },
+  { name: "Sunshine",  logo: "/brand-logos/sunshine.svg"  },
+  { name: "DaVinci",   logo: "/brand-logos/davinci.png"   },
+  { name: "El Doha",   logo: "/brand-logos/eldoha.svg"    },
+  { name: "AddMe",     logo: "/brand-logos/addme.png"     },
+  { name: "Lipton",    logo: "/brand-logos/lipton.png"    },
 ];
 
 const GLASS_BRANDS = [
@@ -291,12 +291,16 @@ export default async function HomePage() {
             {[...BRAND_PARTNERS, ...BRAND_PARTNERS].map((b, i) => (
               <div
                 key={i}
-                className="flex items-center justify-center rounded-xl bg-white border border-gray-200 hover:border-gray-400 hover:shadow-md transition-all flex-shrink-0 cursor-default"
-                style={{ width: 180, height: 70 }}
+                className="flex items-center justify-center rounded-xl bg-white border border-gray-200 hover:border-[#1B4D2E] hover:shadow-md transition-all flex-shrink-0 cursor-default px-4"
+                style={{ width: 180, height: 80 }}
               >
-                <span className="text-sm font-bold" style={{ color: b.color }}>
-                  {b.name}
-                </span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={b.logo}
+                  alt={b.name}
+                  style={{ maxHeight: 50, maxWidth: 140, objectFit: "contain" }}
+                  loading="lazy"
+                />
               </div>
             ))}
           </div>
