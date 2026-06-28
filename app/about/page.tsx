@@ -73,11 +73,11 @@ function StatCard({ value, suffix = "", label, labelAr, started }: {
 function TiltCard({
   children,
   className = "",
-  
+  style,
 }: {
   children: React.ReactNode;
   className?: string;
-  style?: CSSProperties;
+  style?: React.CSSProperties;
 }){
   const ref = useRef<HTMLDivElement>(null);
   const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -91,16 +91,17 @@ function TiltCard({
   const handleLeave = () => {
     if (ref.current) ref.current.style.transform = "perspective(600px) rotateY(0deg) rotateX(0deg) scale(1)";
   };
-  return (
-    <div
-      ref={ref}
-      className={className}
-      onMouseMove={handleMove}
-      onMouseLeave={handleLeave}
-    >
-      {children}
-    </div>
-  );
+ return (
+  <div
+    ref={ref}
+    className={className}
+    style={style}
+    onMouseMove={handleMove}
+    onMouseLeave={handleLeave}
+  >
+    {children}
+  </div>
+);
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
