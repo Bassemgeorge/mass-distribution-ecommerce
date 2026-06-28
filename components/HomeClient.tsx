@@ -464,7 +464,7 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
             ].map(({ icon: Icon, title, titleAr, desc }) => (
               <div key={title} className="bg-white border border-gray-200 rounded-xl p-5 hover:border-[#1B4D2E] hover:shadow-sm transition-all">
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 bg-[#1B4D2E]/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-9 h-9 bg-[#1B4D2E]/10 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
                     <Icon size={16} className="text-[#1B4D2E]" />
                   </div>
                   <div>

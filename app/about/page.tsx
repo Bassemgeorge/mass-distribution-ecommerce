@@ -440,7 +440,7 @@ export default function AboutPage() {
       <section className="relative text-white py-24 overflow-hidden" style={{ background: "#0d2b1a" }}>
         <div className="absolute inset-0 opacity-20"
           style={{ backgroundImage: "linear-gradient(#4ade8033 1px, transparent 1px), linear-gradient(90deg, #4ade8033 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-green-500/15 rounded-full blur-3xl float" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-150 h-75 bg-green-500/15 rounded-full blur-3xl float" />
 
         <div className="relative max-w-3xl mx-auto px-4 text-center">
           <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight mb-3 leading-none">
