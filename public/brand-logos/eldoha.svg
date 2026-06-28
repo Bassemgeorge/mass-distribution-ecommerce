@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 70" width="200" height="70">
+  <rect width="200" height="70" fill="white"/>
+  <rect x="8" y="15" width="6" height="40" rx="3" fill="#1B4D2E"/>
+  <rect x="18" y="15" width="6" height="40" rx="3" fill="#1B4D2E"/>
+  <text x="110" y="32" font-family="Arial,sans-serif" font-size="20" font-weight="bold" fill="#1B4D2E" text-anchor="middle">El Doha</text>
+  <text x="110" y="50" font-family="Arial,sans-serif" font-size="10" fill="#888" text-anchor="middle">FOOD INDUSTRIES</text>
+</svg>
