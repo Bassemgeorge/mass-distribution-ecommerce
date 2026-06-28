@@ -16,7 +16,7 @@ function ProductsContent() {
   const [loading,     setLoading]           = useState(true);
   const [error,       setError]             = useState<string | null>(null);
 
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategories, setActiveCategories] =useState<string[]>([]);
   const [activeBrand,    setActiveBrand]    = useState("All");
   const [search,         setSearch]         = useState("");
   const [showFilters,    setShowFilters]    = useState(false);
@@ -26,7 +26,7 @@ function ProductsContent() {
     const cat    = searchParams.get("category");
     const brand  = searchParams.get("brand");
     const search = searchParams.get("search");
-    if (cat)    setActiveCategory(cat);
+    if (cat)    setActiveCategories([cat]);
     if (brand)  setActiveBrand(brand);
     if (search) setSearch(search);
   }, [searchParams]);
@@ -53,23 +53,25 @@ function ProductsContent() {
     }
     load();
   }, []);
-
+  /* filter active categories  activeBrands   */
   const filtered = allProducts.filter((p) => {
-    const matchCat    = activeCategory === "All" || p.category === activeCategory;
+    const matchCat    = activeCategories.length === 0 || activeCategories.includes(p.category);
     const matchBrand  = activeBrand    === "All" || p.brand    === activeBrand;
     const q = search.toLowerCase();
     const matchSearch = !q || p.nameEn.toLowerCase().includes(q) || p.nameAr.includes(q) || p.brand.toLowerCase().includes(q);
     return matchCat && matchBrand && matchSearch;
   });
 
-  const hasActiveFilters = activeCategory !== "All" || activeBrand !== "All" || search !== "";
+  const hasActiveFilters =
+  activeCategories.length > 0 ||
+  activeBrand !== "All" ||
+  search !== "";
 
   function clearAll() {
-    setActiveCategory("All");
-    setActiveBrand("All");
-    setSearch("");
-  }
-
+  setActiveCategories([]);
+  setActiveBrand("All");
+  setSearch("");
+}
   return (
     <div className="min-h-screen bg-white">
       {/* Page header */}
@@ -152,9 +154,20 @@ function ProductsContent() {
                 {["All", ...categories].map((cat) => (
                   <button
                     key={cat}
-                    onClick={() => setActiveCategory(cat)}
+                    onClick={() => {
+                       if (cat === "All") {
+                       setActiveCategories([]);
+                        return;
+                              }
+
+                        setActiveCategories((prev) =>
+                        prev.includes(cat)
+                         ? prev.filter((c) => c !== cat)
+                         : [...prev, cat]
+                    );
+                         }}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-                      activeCategory === cat
+                      activeCategories.includes(cat)
                         ? "bg-[#111111] text-white border-[#111111]"
                         : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
                     }`}
@@ -170,18 +183,24 @@ function ProductsContent() {
         {/* Active filter chips */}
         {!showFilters && hasActiveFilters && (
           <div className="flex flex-wrap gap-2 mb-4">
-            {activeCategory !== "All" && (
-              <span className="flex items-center gap-1.5 px-3 py-1 bg-[#111111] text-white text-xs font-medium rounded-full">
-                {activeCategory}
-                <button onClick={() => setActiveCategory("All")}><X size={11} /></button>
-              </span>
-            )}
-            {activeBrand !== "All" && (
-              <span className="flex items-center gap-1.5 px-3 py-1 bg-[#1B4D2E] text-white text-xs font-medium rounded-full">
-                {activeBrand}
-                <button onClick={() => setActiveBrand("All")}><X size={11} /></button>
-              </span>
-            )}
+          {activeCategories.length > 0 &&
+  activeCategories.map((cat) => (
+    <span
+      key={cat}
+      className="flex items-center gap-1.5 px-3 py-1 bg-[#111111] text-white text-xs font-medium rounded-full"
+    >
+      {cat}
+      <button
+        onClick={() =>
+          setActiveCategories((prev) =>
+            prev.filter((c) => c !== cat)
+          )
+        }
+      >
+        <X size={11} />
+      </button>
+    </span>
+  ))}
           </div>
         )}
 
