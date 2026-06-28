@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Target, Eye, TrendingUp, Users, Truck, BarChart2, Zap } from "lucide-react";
+import { CSSProperties } from "react";
 
 // ── Animated counter hook ─────────────────────────────────────────────────────
 function useCountUp(target: number, duration = 2000, start = false) {
@@ -57,6 +58,7 @@ function StatCard({ value, suffix = "", label, labelAr, started }: {
 }) {
   const count = useCountUp(value, 2000, started);
   return (
+     
     <div className="stat-card flex flex-col items-center gap-1 px-4 py-6 rounded-2xl border border-white/10 hover:border-green-400/50 transition-all duration-300 hover:scale-105 hover:bg-white/5 cursor-default">
       <p className="font-black text-white leading-none" style={{ fontSize: 48 }}>
         {count}{suffix}
@@ -68,7 +70,15 @@ function StatCard({ value, suffix = "", label, labelAr, started }: {
 }
 
 // ── 3D tilt card ──────────────────────────────────────────────────────────────
-function TiltCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function TiltCard({
+  children,
+  className = "",
+  
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: CSSProperties;
+}){
   const ref = useRef<HTMLDivElement>(null);
   const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = ref.current;
@@ -84,10 +94,9 @@ function TiltCard({ children, className = "" }: { children: React.ReactNode; cla
   return (
     <div
       ref={ref}
+      className={className}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
-      className={className}
-      style={{ transition: "transform 0.15s ease", transformStyle: "preserve-3d" }}
     >
       {children}
     </div>
@@ -96,7 +105,8 @@ function TiltCard({ children, className = "" }: { children: React.ReactNode; cla
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function AboutPage() {
-  const statsSection = useInView(0.3);
+
+  const { ref: statsRef, inView: statsInView } = useInView(0.3);
   const [activeStep, setActiveStep] = useState(0);
   const { ref: fadeRef1, inView: fade1 } = useInView(0.1);
   const { ref: fadeRef2, inView: fade2 } = useInView(0.1);
@@ -110,6 +120,7 @@ export default function AboutPage() {
 
   return (
     <>
+    
       <style>{`
         @keyframes brand-scroll {
           0%   { transform: translateX(0); }
@@ -196,12 +207,12 @@ export default function AboutPage() {
       </section>
 
       {/* ── ANIMATED STATS ───────────────────────────────────────────────── */}
-      <section ref={statsSection.ref} className="bg-[#1B4D2E] py-16">
+      <section ref={statsRef} className="bg-[#1B4D2E] py-16">
         <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard value={2017} suffix=""  label="Founded"    labelAr="تأسست"           started={statsSection.inView} />
-          <StatCard value={800}  suffix="+" label="Customers"  labelAr="عميل"             started={statsSection.inView} />
-          <StatCard value={4000} suffix="+" label="Touchpoints" labelAr="نقطة تواصل"     started={statsSection.inView} />
-          <StatCard value={35}   suffix="+" label="Trucks"     labelAr="شاحنة"            started={statsSection.inView} />
+          <StatCard value={2017} suffix=""  label="Founded"    labelAr="تأسست"           started={statsInView} />
+          <StatCard value={800}  suffix="+" label="Customers"  labelAr="عميل"             started={statsInView} />
+          <StatCard value={4000} suffix="+" label="Touchpoints" labelAr="نقطة تواصل"     started={statsInView} />
+          <StatCard value={35}   suffix="+" label="Trucks"     labelAr="شاحنة"            started={statsInView} />
         </div>
       </section>
 
@@ -379,7 +390,7 @@ export default function AboutPage() {
         <div className="overflow-hidden">
           <div className="flex gap-4 w-max brand-scroll-track px-4">
             {[...BRAND_PARTNERS, ...BRAND_PARTNERS].map((b, i) => (
-              <div key={i} className="flex items-center justify-center rounded-xl bg-white border border-gray-200 hover:border-[#1B4D2E] hover:shadow-md hover:scale-105 transition-all flex-shrink-0 px-4" style={{ width: 180, height: 80 }}>
+              <div key={i} className="flex items-center justify-center rounded-xl bg-white border border-gray-200 hover:border-[#1B4D2E] hover:shadow-md hover:scale-105 transition-all shrink-0 px-4" style={{ width: 180, height: 80 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={b.logo} alt={b.name} style={{ maxHeight: 50, maxWidth: 140, objectFit: "contain" }} loading="lazy" />
               </div>
@@ -412,7 +423,7 @@ export default function AboutPage() {
                 style={{ transitionDelay: `${i * 80}ms` }}
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full bg-[#1B4D2E] mt-2 flex-shrink-0 group-hover:scale-150 transition-transform duration-300" />
+                  <div className="w-2 h-2 rounded-full bg-[#1B4D2E] mt-2 shrink-0 group-hover:scale-150 transition-transform duration-300" />
                   <div>
                     <h3 className="font-black text-sm uppercase tracking-wide mb-0.5">{title}</h3>
                     <p className="text-xs text-gray-400 mb-2" dir="rtl">{titleAr}</p>

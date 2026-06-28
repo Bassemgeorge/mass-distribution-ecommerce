@@ -248,7 +248,7 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
             {GLASS_BRANDS.map((b) => (
               <div key={b.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: b.dot }} />
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0 " style={{ background: b.dot }} />
                   <span className="text-white text-sm font-medium">{b.name}</span>
                 </div>
                 <span className="text-white/60 text-xs">{b.count} products</span>

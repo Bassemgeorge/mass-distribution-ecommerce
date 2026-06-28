@@ -22,14 +22,26 @@ function ProductsContent() {
   const [showFilters,    setShowFilters]    = useState(false);
 
   // Init filters from URL params
-  useEffect(() => {
-    const cat    = searchParams.get("category");
-    const brand  = searchParams.get("brand");
-    const search = searchParams.get("search");
-    if (cat)    setActiveCategories([cat]);
-    if (brand)  setActiveBrand(brand);
-    if (search) setSearch(search);
-  }, [searchParams]);
+ useEffect(() => {
+  const cat = searchParams.get("category");
+  const brand = searchParams.get("brand");
+  const searchValue = searchParams.get("search");
+
+  setActiveCategories((prev) => {
+    const next = cat ? [cat] : [];
+    return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
+  });
+
+  setActiveBrand((prev) => {
+    const next = brand ?? "All";
+    return prev === next ? prev : next;
+  });
+
+  setSearch((prev) => {
+    const next = searchValue ?? "";
+    return prev === next ? prev : next;
+  });
+}, [searchParams]);
 
   // Fetch from Supabase
   useEffect(() => {
@@ -89,7 +101,7 @@ function ProductsContent() {
         {/* Error state */}
         {error && (
           <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-6 text-sm">
-            <AlertCircle size={16} className="flex-shrink-0" />
+            <AlertCircle size={16} className="shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -149,7 +161,7 @@ function ProductsContent() {
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2.5">Category</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2.5"  >Category</p>
               <div className="flex flex-wrap gap-2">
                 {["All", ...categories].map((cat) => (
                   <button
@@ -167,9 +179,11 @@ function ProductsContent() {
                     );
                          }}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-                      activeCategories.includes(cat)
-                        ? "bg-[#111111] text-white border-[#111111]"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                      (cat === "All"
+                          ? activeCategories.length === 0
+                          : activeCategories.includes(cat))
+                          ? "bg-[#111111] text-white border-[#111111]"
+                         : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
                     }`}
                   >
                     {cat}
