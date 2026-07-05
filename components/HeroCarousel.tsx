@@ -8,10 +8,10 @@ import "swiper/css";
 import "swiper/css/pagination";
 
 const images = [
-  "/hero/صور تسوق.jpg",
-  "/hero/صور مطعم.jpeg",
-  "/hero/صور شيف.jpg",
-  "/hero/راجل فى كافيه.png",
+  "/hero/Shopping in comfort at home.png",
+  "/hero/عامل توصيل.png",
+  "/hero/شيف.png",
+  "/hero/عامل فى  كافى.png",
 ];
 
 export default function HeroCarousel() {
