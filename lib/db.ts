@@ -6,6 +6,10 @@
 
 import { supabase } from "./supabase";
 
+function normalizeCategory(category: string) {
+  return category === "Vinegar" ? "Essentials" : category;
+}
+
 // ── Database row type ─────────────────────────────────────────────────────────
 export interface DbProduct {
   id: number;
@@ -29,7 +33,7 @@ export function toProduct(p: DbProduct) {
   return {
     id:             String(p.id),
     brand:          p.brand,
-    category:       p.category,
+    category:       normalizeCategory(p.category),
     nameEn:         p.name_en,
     nameAr:         p.name_ar,
     packSize:       p.pack_size ?? `Case of ${packCount} pcs`,
@@ -82,7 +86,10 @@ export async function getCategoryCounts(): Promise<{ category: string; count: nu
     .eq("is_active", true);
   if (!data) return [];
   const map: Record<string, number> = {};
-  data.forEach(({ category }) => { map[category] = (map[category] ?? 0) + 1; });
+  data.forEach(({ category }) => {
+    const normalized = normalizeCategory(category);
+    map[normalized] = (map[normalized] ?? 0) + 1;
+  });
   return Object.entries(map).map(([category, count]) => ({ category, count })).sort((a, b) => a.category.localeCompare(b.category));
 }
 

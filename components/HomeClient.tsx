@@ -29,7 +29,7 @@ const CATEGORY_CONFIG: Record<
 
   "Olive Oil": {
     photo:
-      "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/Olive%20oil.jpg",
+      "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/Olive%20oil.jpeg",
     ar: "زيت زيتون",
   },
 
@@ -39,15 +39,10 @@ const CATEGORY_CONFIG: Record<
     ar: "معكرونة",
   },
 
-  "Tomato Paste": {
-    photo:
-      "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/Tomato%20Pasta.png",
-    ar: "صلصة طماطم",
-  },
 
   "Sauces": {
     photo:
-      "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/Sauces%20(2).png",
+      "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/Sauce.png",
     ar: "صوصات",
   },
 
@@ -70,23 +65,11 @@ const CATEGORY_CONFIG: Record<
     ar: "قهوة",
   },
 
-  "Olives": {
-    photo:
-      "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/Olives.png",
-    ar: "زيتون",
-  },
-
-  "Pickles": {
-    photo:
-      "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/pickles%20(2).png",
-    ar: "مخللات",
-  },
-
-  "Vinegar": {
-    photo:
-      "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/Vinegar.png",
-    ar: "خل",
-  },
+  "Olives & Pickles": {
+  photo:
+    "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/Olives.png",
+  ar: "زيتون ومخللات",
+},
 
   "Beans": {
     photo:
@@ -94,15 +77,9 @@ const CATEGORY_CONFIG: Record<
     ar: "بقوليات",
   },
 
-  "Speciality": {
+  Essentials: {
     photo:
-      "https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=300&h=300&fit=crop",
-    ar: "منتجات خاصة",
-  },
-
-  Essential: {
-    photo:
-      "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=300&h=300&fit=crop",
+      "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/Essentials.png",
     ar: "اساسيات",
   }
 };
@@ -230,38 +207,7 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
           </div>
         </div>
 
-        {/* Glass card — desktop only */}
-        <div
-          className="hidden md:block absolute right-16 top-1/2 -translate-y-1/2 z-20 w-[280px] rounded-2xl p-6"
-          style={{
-            background: "rgba(255,255,255,0.12)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-            border: "1px solid rgba(255,255,255,0.22)",
-            
-          }}
-        >
-          <p className="text-white font-bold text-lg mb-0.5">Quick Order</p>
-          <p className="text-white/70 text-xs mb-4">Join 800+ HORECA businesses</p>
-          <div className="border-t border-white/20 mb-4" />
-          <div className="space-y-3 mb-5">
-            {GLASS_BRANDS.map((b) => (
-              <div key={b.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0 " style={{ background: b.dot }} />
-                  <span className="text-white text-sm font-medium">{b.name}</span>
-                </div>
-                <span className="text-white/60 text-xs">{b.count} products</span>
-              </div>
-            ))}
-          </div>
-          <Link
-            href="/products"
-            className="flex items-center justify-center gap-2 w-full bg-[#1B4D2E] hover:bg-[#163d24] text-white text-sm font-semibold py-3 rounded-xl transition-colors"
-          >
-            View All Products <ArrowRight size={14} />
-          </Link>
-        </div>
+       
       </section>
 
       {/* ── SEARCH BAR ───────────────────────────────────────────────────── */}
@@ -297,7 +243,10 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
           </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-5">
   {categoryCounts
-    .filter(({ category }) => !CATEGORY_CONFIG[category]?.hidden)
+    .filter(
+      ({ category }) =>
+        category !== "Vinegar" && !CATEGORY_CONFIG[category]?.hidden
+    )
     .map(({ category, count }) => {
       const cfg = CATEGORY_CONFIG[category];
 
