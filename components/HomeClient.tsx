@@ -24,7 +24,7 @@ const CATEGORY_CONFIG: Record<
   "Oil & Ghee": {
     photo:
       "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/oil%20(1).png",
-    ar: "زيت ",
+    ar: "زيت & سمنه",
   },
 
   "Olive Oil": {
@@ -59,11 +59,11 @@ const CATEGORY_CONFIG: Record<
     ar: "توابل",
   },
 
-  "Coffee": {
-    photo:
-      "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/coffee.png",
-    ar: "قهوة",
-  },
+  "Coffee and Tea": {
+  photo:
+    "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/coffee%20and%20tea%20(1).png",
+  ar: "قهوة وشاي",
+},
 
   "Olives & Pickles": {
   photo:
@@ -77,12 +77,21 @@ const CATEGORY_CONFIG: Record<
     ar: "بقوليات",
   },
 
-  Essentials: {
+ "Essentials": {
     photo:
       "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/Essentials.png",
     ar: "اساسيات",
-  }
+  },
+  "Frozen": {
+  photo:
+    "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/categories-imajes/Frozen.jpg",
+  ar: "مجمدات",
+},
+
 };
+
+
+
 
 const BRAND_PARTNERS = [
   { name: "Wadi Food", logo: "/brand-logos/wadi-food.png" },
