@@ -20,6 +20,9 @@ type FormState = {
 
 const AREAS = ["Cairo", "Giza", "Alexandria", "New Cairo", "Sheikh Zayed", "6th of October", "Sharm El Sheikh", "Hurghada", "Mansoura", "Other"];
 
+
+const MIN_ORDER_TOTAL = 10000;
+
 const emptyForm: FormState = {
   businessName: "", contactName: "", phone: "",
   address: "", area: "Cairo", paymentMethod: "cash", notes: "",
@@ -31,28 +34,38 @@ function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [form, setForm]       = useState<FormState>({ ...emptyForm, notes: searchParams.get("notes") ?? "" });
+  const [form, setForm] = useState<FormState>({ ...emptyForm, notes: searchParams.get("notes") ?? "" });
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Pre-fill from auth profile
-  useEffect(() => {
-    if (customer) {
-      setForm((f) => ({
-        ...f,
-        businessName: customer.business_name ?? f.businessName,
-        contactName:  customer.name          ?? f.contactName,
-        phone:        customer.phone         ?? f.phone,
-        address:      customer.address       ?? f.address,
-      }));
-    }
-  }, [customer]);
+  // Pre-fill from auth profile
+useEffect(() => {
+  if (!customer) return;
+
+  const timer = window.setTimeout(() => {
+    setForm((f) => ({
+      ...f,
+      businessName: customer.business_name ?? f.businessName,
+      contactName: customer.name ?? f.contactName,
+      phone: customer.phone ?? f.phone,
+      address: customer.address ?? f.address,
+    }));
+  }, 0);
+
+  return () => window.clearTimeout(timer);
+}, [customer]);
 
   function set(field: keyof FormState, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
   async function submitOrder() {
+    if (total < MIN_ORDER_TOTAL) {
+      setError(`Minimum order is EGP ${MIN_ORDER_TOTAL.toLocaleString()}.`);
+      return;
+    }
+
     if (!form.businessName || !form.contactName || !form.phone || !form.address) {
       setError("Please fill in all required fields.");
       return;
@@ -66,10 +79,10 @@ function CheckoutContent() {
       if (user && customer) {
         // Logged-in user: update their profile and reuse their ID
         await supabase.from("customers").update({
-          name:          form.contactName,
+          name: form.contactName,
           business_name: form.businessName,
-          phone:         form.phone,
-          address:       `${form.address}, ${form.area}`,
+          phone: form.phone,
+          address: `${form.address}, ${form.area}`,
         }).eq("id", user.id);
         customerId = user.id;
       } else {
@@ -77,10 +90,10 @@ function CheckoutContent() {
         const { data: newCustomer, error: custErr } = await supabase
           .from("customers")
           .insert({
-            name:          form.contactName,
+            name: form.contactName,
             business_name: form.businessName,
-            phone:         form.phone,
-            address:       `${form.address}, ${form.area}`,
+            phone: form.phone,
+            address: `${form.address}, ${form.area}`,
           })
           .select("id")
           .single();
@@ -93,9 +106,9 @@ function CheckoutContent() {
         .from("orders")
         .insert({
           customer_id: customerId,
-          status:      "pending",
-          total:       total,
-          notes:       [form.notes, `Payment: ${form.paymentMethod}`].filter(Boolean).join(" | ") || null,
+          status: "pending",
+          total: total,
+          notes: [form.notes, `Payment: ${form.paymentMethod}`].filter(Boolean).join(" | ") || null,
         })
         .select("id")
         .single();
@@ -104,12 +117,12 @@ function CheckoutContent() {
 
       // 3 — insert order items
       const itemRows = items.map(({ product, quantity }) => ({
-        order_id:     order.id,
-        product_id:   parseInt(product.id, 10),
+        order_id: order.id,
+        product_id: parseInt(product.id, 10),
         product_name: product.nameEn,
         quantity,
-        unit_price:   product.pricePerCarton,
-        subtotal:     product.pricePerCarton * quantity,
+        unit_price: product.pricePerCarton,
+        subtotal: product.pricePerCarton * quantity,
       }));
 
       const { error: itemErr } = await supabase.from("order_items").insert(itemRows);
@@ -220,8 +233,8 @@ function CheckoutContent() {
               <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">Payment Method</h2>
               <div className="space-y-2">
                 {[
-                  { value: "cash",     label: "Cash on Delivery",  desc: "Pay in cash when your order arrives." },
-                  { value: "transfer", label: "Bank Transfer",     desc: "We'll send bank details after confirming your order." },
+                  { value: "cash", label: "Cash on Delivery", desc: "Pay in cash when your order arrives." },
+                  { value: "transfer", label: "Bank Transfer", desc: "We'll send bank details after confirming your order." },
                 ].map(({ value, label, desc }) => (
                   <label key={value} className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${form.paymentMethod === value ? "border-[#1B4D2E] bg-[#1B4D2E]/5" : "border-gray-200 hover:border-gray-300"}`}>
                     <input
@@ -243,10 +256,18 @@ function CheckoutContent() {
 
             <button
               onClick={submitOrder}
-              disabled={loading}
+              disabled={loading || total < MIN_ORDER_TOTAL}
               className="w-full bg-[#1B4D2E] text-white font-semibold py-3.5 rounded-lg hover:bg-[#163d24] transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? <><Loader2 size={16} className="animate-spin" /> Placing Order…</> : "Place Order"}
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Placing Order…
+                </>
+              ) : total < MIN_ORDER_TOTAL ? (
+                `Minimum order EGP ${MIN_ORDER_TOTAL.toLocaleString()}`
+              ) : (
+                "Place Order"
+              )}
             </button>
             <p className="text-xs text-gray-400 text-center -mt-4">By placing this order you agree to our terms of service.</p>
           </div>
@@ -275,10 +296,21 @@ function CheckoutContent() {
                   <span>Shipping</span>
                   <span className="text-[#1B4D2E] font-medium">To be confirmed</span>
                 </div>
+                <div className="flex justify-between font-bold text-sm pt-2     border-t border-gray-200">
+                  <span>Total (excl. VAT)</span>
+                  <span>EGP {total.toFixed(2)}</span>
+
+                </div>
                 <div className="flex justify-between font-bold text-sm pt-2 border-t border-gray-200">
                   <span>Total (excl. VAT)</span>
                   <span>EGP {total.toFixed(2)}</span>
                 </div>
+
+                {total < MIN_ORDER_TOTAL && (
+                  <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    Minimum order is EGP {MIN_ORDER_TOTAL.toLocaleString()}.
+                  </p>
+                )}
               </div>
             </div>
           </div>

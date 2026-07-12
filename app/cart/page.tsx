@@ -7,8 +7,10 @@ import { Trash2, ArrowRight, ShoppingBag } from "lucide-react";
 import ProductImage from "@/components/ProductImage";
 
 export default function CartPage() {
-  const { items, remove, update, total, count } = useCart();
-  const [notes, setNotes] = useState("");
+const { items, remove, update, total, count } = useCart();
+const [notes, setNotes] = useState("");
+const MIN_ORDER_TOTAL = 10000;
+const belowMinimum = total < MIN_ORDER_TOTAL;
 
   if (count === 0) {
     return (
@@ -111,12 +113,28 @@ export default function CartPage() {
                   <span>EGP {total.toFixed(2)}</span>
                 </div>
               </div>
-              <Link
-                href={`/checkout${notes ? `?notes=${encodeURIComponent(notes)}` : ""}`}
-                className="block w-full text-center bg-[#1B4D2E] text-white font-semibold py-3 rounded-lg hover:bg-[#163d24] transition-colors text-sm"
-              >
-                Proceed to Checkout
-              </Link>
+             
+             {belowMinimum && (
+  <p className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+    Minimum order is EGP {MIN_ORDER_TOTAL.toLocaleString()}.
+  </p>
+)}
+
+{belowMinimum ? (
+  <button
+    disabled
+    className="block w-full text-center bg-gray-300 text-white font-semibold py-3 rounded-lg cursor-not-allowed text-sm"
+  >
+    Minimum order EGP {MIN_ORDER_TOTAL.toLocaleString()}
+  </button>
+) : (
+  <Link
+    href={`/checkout${notes ? `?notes=${encodeURIComponent(notes)}` : ""}`}
+    className="block w-full text-center bg-[#1B4D2E] text-white font-semibold py-3 rounded-lg hover:bg-[#163d24] transition-colors text-sm"
+  >
+    Proceed to Checkout
+  </Link>
+)}
               <Link href="/products" className="block w-full text-center text-gray-500 text-sm mt-3 hover:text-[#1B4D2E] transition-colors">
                 Continue Shopping
               </Link>
