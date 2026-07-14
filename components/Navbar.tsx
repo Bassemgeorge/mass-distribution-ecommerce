@@ -41,14 +41,15 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
         {/* Logo */}
         <Link href="/" className="flex items-center shrink-0">
-          <Image
-            src="/logo-green.png.png"
-            alt="Mass Distribution"
-            width={160}
-            height={48}
-            className="h-10 w-auto"
-            priority
-          />
+         <Image
+  src="/logo-green.png.png"
+  alt="Mass Distribution"
+  width={220}
+  height={80}
+  className="h-12 w-auto object-contain"
+  priority
+  quality={100}
+/>
         </Link>
 
         {/* Desktop nav */}
