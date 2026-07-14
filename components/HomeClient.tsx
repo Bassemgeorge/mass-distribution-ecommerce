@@ -179,14 +179,8 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
             HORECA Distribution · Egypt
           </div>
 
-          <h1 className="font-extrabold text-white leading-[1.1] mb-4" style={{ fontSize: "clamp(2rem,4.5vw,3.5rem)" }}>
-            Egypt&apos;s #1 HORECA<br />
-            Supply Platform
-          </h1>
-
-          <p className="text-white/80 mb-3" style={{ fontSize: 20 }} dir="rtl">
-            منصة توريد الضيافة الأولى في مصر
-          </p>
+         
+          
 
           <p className="text-white/85 text-base leading-relaxed mb-8 max-w-md">
             Order premium F&amp;B supplies by carton.<br />
