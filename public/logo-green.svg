@@ -1,0 +1,29 @@
+<svg width="3130" height="1137" viewBox="0 0 3130 1137" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Mass Distribution Logo</title>
+  <g fill="#39E08A">
+    <polygon points="0,135 900,80 900,170 0,135"/>
+    <polygon points="0,240 900,195 900,285 0,240"/>
+    <polygon points="0,345 900,310 900,400 0,345"/>
+    <polygon points="0,450 900,425 900,515 0,450"/>
+    <polygon points="0,555 900,540 900,630 0,555"/>
+    <polygon points="0,660 900,655 900,745 0,660"/>
+    <polygon points="0,765 900,770 900,860 0,765"/>
+    <polygon points="0,870 900,885 900,975 0,870"/>
+  </g>
+  <g fill="#FFFFFF">
+    <text x="980" y="480"
+      font-family="Arial Black, Impact, Montserrat, Arial, sans-serif"
+      font-size="300"
+      font-weight="900"
+      letter-spacing="-12">
+      MASS
+    </text>
+    <text x="990" y="690"
+      font-family="Arial, Montserrat, Helvetica, sans-serif"
+      font-size="140"
+      font-weight="800"
+      letter-spacing="8">
+      DISTRIBUTION
+    </text>
+  </g>
+</svg>

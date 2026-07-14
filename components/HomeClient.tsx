@@ -102,10 +102,10 @@ const BRAND_PARTNERS = [
   { name: "Savola",    logo: "/brand-logos/savola.png"    },
   { name: "Unilever",  logo: "/brand-logos/unilever.png"  },
   { name: "Nestlé",    logo: "/brand-logos/nestle.png"    },
-  { name: "Sunshine",  logo: "/brand-logos/sunshine.svg"  },
   { name: "DaVinci",   logo: "/brand-logos/davinci.png"   },
-  { name: "El Doha",   logo: "/brand-logos/eldoha.svg"    },
   { name: "AddMe",     logo: "/brand-logos/addme.png"     },
+  { name: "Sunshine", logo: "/brand-logos/sunshine-tuna-logo.png" },
+  { name: "El Doha", logo: "/brand-logos/Al doha logo.png" },
   { name: "Lipton",    logo: "/brand-logos/lipton.png"    },
 ];
 
