@@ -15,7 +15,6 @@ export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  if (pathname.startsWith("/admin")) return null;
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -29,12 +28,15 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  
   async function handleSignOut() {
     setDropdownOpen(false);
     setOpen(false);
     await signOut();
     router.push("/");
   }
+  
+  if (pathname.startsWith("/admin")) return null;
 
   return (
     <header className="sticky top-0 z-50 bg-[#111111] border-b border-white/10">
@@ -42,24 +44,24 @@ export default function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center shrink-0">
           <Image
-  src="/logo-green.png.png"
-  alt="Mass Distribution"
-  width={260}
-  height={95}
-  className="h-12 w-auto object-contain"
-  priority
-  quality={100}
-  sizes="260px"
-/>
+            src="/logo-green.png.png"
+            alt="Mass Distribution"
+            width={260}
+            height={95}
+            className="h-12 w-auto object-contain"
+            priority
+            quality={100}
+            sizes="260px"
+          />
         </Link>
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
           {[
-            { href: "/",         label: "Home"     },
+            { href: "/", label: "Home" },
             { href: "/products", label: "Products" },
-            { href: "/about",    label: "About"    },
-            { href: "/contact",  label: "Contact"  },
+            { href: "/about", label: "About" },
+            { href: "/contact", label: "Contact" },
           ].map(({ href, label }) => (
             <Link key={href} href={href} className="text-white/70 hover:text-white text-sm font-medium transition-colors">
               {label}
@@ -136,10 +138,10 @@ export default function Navbar() {
       {open && (
         <div className="md:hidden bg-[#111111] border-t border-white/10 px-4 py-4 flex flex-col gap-1">
           {[
-            { href: "/",         label: "Home"       },
-            { href: "/products", label: "Products"   },
-            { href: "/about",    label: "About"      },
-            { href: "/contact",  label: "Contact"    },
+            { href: "/", label: "Home" },
+            { href: "/products", label: "Products" },
+            { href: "/about", label: "About" },
+            { href: "/contact", label: "Contact" },
           ].map(({ href, label }) => (
             <Link
               key={href}

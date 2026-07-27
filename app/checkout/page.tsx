@@ -61,81 +61,123 @@ useEffect(() => {
   }
 
   async function submitOrder() {
-    if (total < MIN_ORDER_TOTAL) {
-      setError(`Minimum order is EGP ${MIN_ORDER_TOTAL.toLocaleString()}.`);
-      return;
-    }
+  if (total < MIN_ORDER_TOTAL) {
+    setError(`Minimum order is EGP ${MIN_ORDER_TOTAL.toLocaleString()}.`);
+    return;
+  }
 
-    if (!form.businessName || !form.contactName || !form.phone || !form.address) {
-      setError("Please fill in all required fields.");
-      return;
-    }
-    setError(null);
-    setLoading(true);
+  if (!form.businessName || !form.contactName || !form.phone || !form.address) {
+    setError("Please fill in all required fields.");
+    return;
+  }
 
-    try {
-      // 1 — resolve customer ID
-      let customerId: string;
-      if (user && customer) {
-        // Logged-in user: update their profile and reuse their ID
-        await supabase.from("customers").update({
+  setError(null);
+  setLoading(true);
+
+  try {
+    // 1 — resolve customer ID
+    let customerId: string;
+
+    if (user && customer) {
+      await supabase
+        .from("customers")
+        .update({
           name: form.contactName,
           business_name: form.businessName,
           phone: form.phone,
           address: `${form.address}, ${form.area}`,
-        }).eq("id", user.id);
-        customerId = user.id;
-      } else {
-        // Guest: insert new customer row
-        const { data: newCustomer, error: custErr } = await supabase
-          .from("customers")
-          .insert({
-            name: form.contactName,
-            business_name: form.businessName,
-            phone: form.phone,
-            address: `${form.address}, ${form.area}`,
-          })
-          .select("id")
-          .single();
-        if (custErr) throw new Error(custErr.message);
-        customerId = (newCustomer as { id: string }).id;
-      }
+        })
+        .eq("id", user.id);
 
-      // 2 — insert order
-      const { data: order, error: orderErr } = await supabase
-        .from("orders")
+      customerId = user.id;
+    } else {
+      const { data: newCustomer, error: custErr } = await supabase
+        .from("customers")
         .insert({
-          customer_id: customerId,
-          status: "pending",
-          total: total,
-          notes: [form.notes, `Payment: ${form.paymentMethod}`].filter(Boolean).join(" | ") || null,
+          name: form.contactName,
+          business_name: form.businessName,
+          phone: form.phone,
+          address: `${form.address}, ${form.area}`,
         })
         .select("id")
         .single();
 
-      if (orderErr) throw new Error(orderErr.message);
+      if (custErr) throw new Error(custErr.message);
 
-      // 3 — insert order items
-      const itemRows = items.map(({ product, quantity }) => ({
-        order_id: order.id,
-        product_id: parseInt(product.id, 10),
-        product_name: product.nameEn,
-        quantity,
-        unit_price: product.pricePerCarton,
-        subtotal: product.pricePerCarton * quantity,
-      }));
-
-      const { error: itemErr } = await supabase.from("order_items").insert(itemRows);
-      if (itemErr) throw new Error(itemErr.message);
-
-      // 4 — clear cart and redirect
-      clear();
-      router.push(`/order-confirmation/${order.id}`);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-      setLoading(false);
+      customerId = (newCustomer as { id: string }).id;
     }
+
+    // 2 — insert order
+    const { data: order, error: orderErr } = await supabase
+      .from("orders")
+      .insert({
+        customer_id: customerId,
+        status: "pending",
+        total,
+        payment_method: form.paymentMethod,
+        payment_status: form.paymentMethod === "paymob" ? "pending" : "unpaid",
+        notes: [form.notes, `Payment: ${form.paymentMethod}`].filter(Boolean).join(" | ") || null,
+      })
+      .select("id")
+      .single();
+
+    if (orderErr) throw new Error(orderErr.message);
+
+    // 3 — insert order items
+    const itemRows = items.map(({ product, quantity }) => ({
+      order_id: order.id,
+      product_id: parseInt(product.id, 10),
+      product_name: product.nameEn,
+      quantity,
+      unit_price: product.pricePerCarton,
+      subtotal: product.pricePerCarton * quantity,
+    }));
+
+    const { error: itemErr } = await supabase.from("order_items").insert(itemRows);
+    if (itemErr) throw new Error(itemErr.message);
+
+    // 4 — if Paymob, create payment intention and redirect
+    if (form.paymentMethod === "paymob") {
+      const response = await fetch("/api/paymob/create-intention", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          total,
+          items,
+          customer: {
+            name: form.contactName,
+            phone: form.phone,
+            address: `${form.address}, ${form.area}`,
+            city: form.area,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to start Paymob payment.");
+      }
+
+      if (!data.checkoutUrl) {
+        throw new Error("Paymob checkout URL was not returned.");
+      }
+
+      window.location.href = data.checkoutUrl;
+      return;
+    }
+
+    // 5 — cash / bank transfer normal flow
+    clear();
+    router.push(`/order-confirmation/${order.id}`);
+  } catch (err: unknown) {
+    setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    setLoading(false);
   }
+}
 
   if (count === 0) {
     return (
@@ -234,8 +276,9 @@ useEffect(() => {
               <div className="space-y-2">
                 {[
                   { value: "cash", label: "Cash on Delivery", desc: "Pay in cash when your order arrives." },
-                  { value: "transfer", label: "Bank Transfer", desc: "We'll send bank details after confirming your order." },
-                ].map(({ value, label, desc }) => (
+                 { value: "transfer", label: "Bank Transfer", desc: "We'll send bank details after confirming your order." },
+                 { value: "paymob", label: "Pay Online", desc: "Pay securely online by card through Paymob." },
+                    ].map(({ value, label, desc }) => (
                   <label key={value} className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${form.paymentMethod === value ? "border-[#1B4D2E] bg-[#1B4D2E]/5" : "border-gray-200 hover:border-gray-300"}`}>
                     <input
                       type="radio"
@@ -266,7 +309,7 @@ useEffect(() => {
               ) : total < MIN_ORDER_TOTAL ? (
                 `Minimum order EGP ${MIN_ORDER_TOTAL.toLocaleString()}`
               ) : (
-                "Place Order"
+                form.paymentMethod === "paymob" ? "Pay Online" : "Place Order"
               )}
             </button>
             <p className="text-xs text-gray-400 text-center -mt-4">By placing this order you agree to our terms of service.</p>
