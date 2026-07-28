@@ -318,7 +318,7 @@ export default function ContactPage() {
                   </div>
 
                   <div>
-                    <label className={lbl}>How did you hear about us?</label>
+                    <label className={lbl}>How did you hear about us .?</label>
                     <select
                       value={form.heardFrom}
                       onChange={(e) => set("heardFrom", e.target.value)}
