@@ -84,7 +84,7 @@ export default function ContactPage() {
       setOk(true);
       setForm({ ...empty });
     } catch (err) {
-      console.error("Contact form fetch error:", err);
+      console.error("Contact form error:", err);
       setErr("Connection error. Please try WhatsApp instead.");
     } finally {
       setLoad(false);
@@ -93,6 +93,7 @@ export default function ContactPage() {
 
   const inp =
     "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#1B4D2E] transition-colors bg-white";
+
   const lbl = "block text-xs font-medium text-gray-500 mb-1.5";
   const req = <span className="text-red-400 ml-0.5">*</span>;
 
@@ -145,6 +146,7 @@ export default function ContactPage() {
                     <p className="text-xs font-medium text-gray-400">
                       {label} · <span dir="rtl">{labelAr}</span>
                     </p>
+
                     {href ? (
                       <a
                         href={href}
@@ -161,11 +163,16 @@ export default function ContactPage() {
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-sm font-bold text-[#111111] mb-1">Our Coverage Area</h3>
-              <p className="text-xs text-gray-400 mb-3">We deliver across Cairo and Giza within 24–48 hours</p>
-              <p className="text-xs text-gray-400 mb-4" dir="rtl">
-                نوصل في القاهرة والجيزة خلال 24 إلى 48 ساعة
+              <h3 className="text-sm font-bold text-[#111111] mb-1">
+                Our Coverage Area
+              </h3>
+              <p className="text-xs text-gray-400 mb-3">
+                We deliver across Cairo and Giza within 24–48 hours.
               </p>
+              <p className="text-xs text-gray-400 mb-4" dir="rtl">
+                نوصل في القاهرة والجيزة خلال 24 إلى 48 ساعة.
+              </p>
+
               <div className="flex gap-2 flex-wrap">
                 {[
                   { en: "Cairo", ar: "القاهرة" },
@@ -175,28 +182,18 @@ export default function ContactPage() {
                     key={en}
                     className="inline-flex items-center gap-1.5 bg-[#E8F5E9] text-[#1B4D2E] text-xs font-semibold px-3 py-1.5 rounded-full border border-green-200"
                   >
-                    <MapPin size={11} /> {en} · {ar}
+                    <MapPin size={11} /> {en} · <span dir="rtl">{ar}</span>
                   </span>
                 ))}
               </div>
             </div>
-
-            <a
-              href="#"
-              className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-[#0A66C2] hover:bg-blue-50 transition-colors group"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="#0A66C2" className="flex-shrink-0">
-                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-              </svg>
-              <span className="text-sm font-medium text-gray-600 group-hover:text-[#0A66C2] transition-colors">
-                Follow us on LinkedIn
-              </span>
-            </a>
           </div>
 
           <div className="lg:col-span-3">
             <div className="bg-white rounded-xl border border-gray-200 p-8">
-              <h2 className="text-xl font-bold text-[#111111] mb-1">Send an Inquiry</h2>
+              <h2 className="text-xl font-bold text-[#111111] mb-1">
+                Send an Inquiry
+              </h2>
               <p className="text-gray-400 text-sm mb-6" dir="rtl">
                 إرسال الاستفسار
               </p>
@@ -204,11 +201,19 @@ export default function ContactPage() {
               {success ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <CheckCircle size={48} className="text-[#1B4D2E] mb-4" />
-                  <h3 className="text-lg font-bold text-[#111111] mb-2">Thank you!</h3>
-                  <p className="text-gray-500 text-sm mb-1">We&apos;ll contact you within 24 hours.</p>
+
+                  <h3 className="text-lg font-bold text-[#111111] mb-2">
+                    Thank you!
+                  </h3>
+
+                  <p className="text-gray-500 text-sm mb-1">
+                    We&apos;ll contact you within 24 hours.
+                  </p>
+
                   <p className="text-gray-400 text-sm" dir="rtl">
                     شكرًا! سنتواصل معك خلال 24 ساعة.
                   </p>
+
                   <button
                     onClick={() => setOk(false)}
                     className="mt-8 text-sm text-[#1B4D2E] hover:underline font-medium"
@@ -220,7 +225,8 @@ export default function ContactPage() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {error && (
                     <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2.5">
-                      <AlertCircle size={15} className="flex-shrink-0" /> {error}
+                      <AlertCircle size={15} className="flex-shrink-0" />
+                      {error}
                     </div>
                   )}
 
@@ -235,6 +241,7 @@ export default function ContactPage() {
                         placeholder="Cairo Marriott Hotel"
                       />
                     </div>
+
                     <div>
                       <label className={lbl}>Contact Name {req}</label>
                       <input
@@ -258,6 +265,7 @@ export default function ContactPage() {
                         placeholder="+20 10 xxxx xxxx"
                       />
                     </div>
+
                     <div>
                       <label className={lbl}>Email Address {req}</label>
                       <input
@@ -283,9 +291,14 @@ export default function ContactPage() {
                         ))}
                       </select>
                     </div>
+
                     <div>
                       <label className={lbl}>Area</label>
-                      <select value={form.area} onChange={(e) => set("area", e.target.value)} className={inp}>
+                      <select
+                        value={form.area}
+                        onChange={(e) => set("area", e.target.value)}
+                        className={inp}
+                      >
                         {AREAS.map((a) => (
                           <option key={a}>{a}</option>
                         ))}
@@ -348,13 +361,21 @@ export default function ContactPage() {
           <div className="flex-shrink-0 w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center">
             <MapPin size={32} className="text-white" />
           </div>
+
           <div className="text-center sm:text-left">
-            <p className="text-xs font-semibold text-green-300 uppercase tracking-widest mb-1">Cairo &amp; Giza</p>
-            <h2 className="text-xl font-bold leading-snug">Order today — delivered to your door within 24–48 hours</h2>
+            <p className="text-xs font-semibold text-green-300 uppercase tracking-widest mb-1">
+              Cairo &amp; Giza
+            </p>
+
+            <h2 className="text-xl font-bold leading-snug">
+              Order today — delivered to your door within 24–48 hours
+            </h2>
+
             <p className="text-green-300 text-sm mt-1" dir="rtl">
               اطلب اليوم — التوصيل لبابك خلال 24 إلى 48 ساعة
             </p>
           </div>
+
           <a
             href={`https://wa.me/${WHATSAPP_NUMBER}`}
             target="_blank"

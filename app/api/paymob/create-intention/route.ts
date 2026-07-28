@@ -1,3 +1,5 @@
+// here we take with server just 
+
 import { NextResponse } from "next/server";
 
 type CheckoutItem = {
@@ -25,6 +27,7 @@ type RequestBody = {
 const PAYMOB_BASE_URL = "https://accept.paymob.com";
 
 export async function POST(request: Request) {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   try {
     const secretKey = process.env.PAYMOB_SECRET_KEY;
     const publicKey = process.env.PAYMOB_PUBLIC_KEY;
@@ -89,6 +92,8 @@ export async function POST(request: Request) {
           supabase_order_id: body.orderId,
         },
         special_reference: `mass-${body.orderId}`,
+        redirection_url: `${siteUrl}/payment/success?orderId=${body.orderId}`,
+        notification_url: `${siteUrl}/api/paymob/webhook`,
       }),
     });
 

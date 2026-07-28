@@ -166,6 +166,7 @@ useEffect(() => {
         throw new Error("Paymob checkout URL was not returned.");
       }
 
+      clear();
       window.location.href = data.checkoutUrl;
       return;
     }
@@ -296,7 +297,7 @@ useEffect(() => {
                 ))}
               </div>
             </section>
-
+ 
             <button
               onClick={submitOrder}
               disabled={loading || total < MIN_ORDER_TOTAL}
