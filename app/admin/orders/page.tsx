@@ -8,7 +8,6 @@ const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",
   confirmed: "bg-blue-50 text-blue-700 border-blue-200",
   processing: "bg-purple-50 text-purple-700 border-purple-200",
-  shipped: "bg-indigo-50 text-indigo-700 border-indigo-200",
   delivered: "bg-green-50 text-[#1B4D2E] border-green-200",
   cancelled: "bg-red-50 text-red-700 border-red-200",
   payment_failed: "bg-red-50 text-red-700 border-red-200",
@@ -26,7 +25,6 @@ const FILTERS = [
   "pending",
   "confirmed",
   "processing",
-  "shipped",
   "delivered",
   "cancelled",
   "paid",
@@ -82,7 +80,6 @@ function getPaymentMethodLabel(method: string | null | undefined) {
 
   if (normalized === "paymob") return "Paymob";
   if (normalized === "cash") return "Cash";
- 
 
   return formatLabel(method);
 }
@@ -340,6 +337,17 @@ export default function AdminOrdersPage() {
 
                           {o.status === "confirmed" && (
                             <button
+                              onClick={() => updateStatus(o.id, "processing")}
+                              disabled={updating === o.id}
+                              className="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors flex items-center gap-1"
+                            >
+                              <CheckCircle size={11} />
+                              Processing
+                            </button>
+                          )}
+
+                          {o.status === "processing" && (
+                            <button
                               onClick={() => updateStatus(o.id, "delivered")}
                               disabled={updating === o.id}
                               className="text-xs px-2 py-1 bg-green-50 text-[#1B4D2E] rounded-lg hover:bg-green-100 transition-colors flex items-center gap-1"
@@ -539,7 +547,7 @@ export default function AdminOrdersPage() {
                 </h3>
 
                 <div className="flex flex-wrap gap-2">
-                  {["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"].map((s) => (
+                  {["pending", "confirmed", "processing", "delivered", "cancelled"].map((s) => (
                     <button
                       key={s}
                       onClick={() => updateStatus(modal.id, s)}
