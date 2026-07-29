@@ -277,7 +277,6 @@ useEffect(() => {
               <div className="space-y-2">
                 {[
                   { value: "cash", label: "Cash on Delivery", desc: "Pay in cash when your order arrives." },
-                 { value: "transfer", label: "Bank Transfer", desc: "We'll send bank details after confirming your order." },
                  { value: "paymob", label: "Pay Online", desc: "Pay securely online by card through Paymob." },
                     ].map(({ value, label, desc }) => (
                   <label key={value} className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${form.paymentMethod === value ? "border-[#1B4D2E] bg-[#1B4D2E]/5" : "border-gray-200 hover:border-gray-300"}`}>
