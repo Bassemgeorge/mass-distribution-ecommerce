@@ -231,7 +231,7 @@ export default function AboutPage() {
             <h2 className="text-2xl font-black uppercase tracking-tight mb-1">Our Vision</h2>
             <p className="text-green-400 text-xs font-bold uppercase tracking-widest mb-4">رؤيتنا</p>
             <p className="text-gray-300 leading-relaxed">
-              To <strong className="text-white">elevate and modernize</strong> Egypt&apos;s HORECA ecosystem
+              To <strong className="text-white">elevate and modernize</strong>{" "}Egypt&apos;s HORECA ecosystem
               by fostering strong connections between brands and operators for sustainable growth.
             </p>
             <p className="text-gray-500 text-sm mt-3 leading-relaxed" dir="rtl">
