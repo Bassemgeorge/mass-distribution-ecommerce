@@ -28,12 +28,11 @@ const STATUS_COLORS: Record<string, string> = {
   pending:    "bg-yellow-50 text-yellow-700 border-yellow-200",
   confirmed:  "bg-blue-50 text-blue-700 border-blue-200",
   processing: "bg-purple-50 text-purple-700 border-purple-200",
-  shipped:    "bg-indigo-50 text-indigo-700 border-indigo-200",
   delivered:  "bg-green-50 text-[#1B4D2E] border-green-200",
   cancelled:  "bg-red-50 text-red-700 border-red-200",
 };
 
-const ALL_STATUSES = ["All", "pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
+const ALL_STATUSES = ["All", "pending", "confirmed", "processing", "delivered", "cancelled"];
 
 export default function OrdersPage() {
   const { user, loading } = useAuth();
