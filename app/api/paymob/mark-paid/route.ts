@@ -46,9 +46,9 @@ export async function POST(request: Request) {
       .from("orders")
       .update({
         payment_status: "paid",
-        status: "confirmed",
-        paymob_transaction_id: body.transactionId || "success-page-confirmed",
-      })
+        status: "pending",
+         paymob_transaction_id: body.transactionId || "success-page-confirmed",
+})
       .eq("id", body.orderId);
 
     if (updateError) {

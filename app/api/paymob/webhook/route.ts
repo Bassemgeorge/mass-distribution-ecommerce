@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       .from("orders")
       .update({
         payment_status: isSuccess && !isPending ? "paid" : "failed",
-        status: isSuccess && !isPending ? "confirmed" : "payment_failed",
+       status: isSuccess && !isPending ? "pending" : "payment_failed",
         paymob_transaction_id: transactionId,
       })
       .eq("id", supabaseOrderId);
