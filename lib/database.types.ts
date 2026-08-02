@@ -25,6 +25,7 @@ export interface Database {
       customers: {
         Row: {
           id: string;
+          user_id: string | null;
           business_name: string;
           contact_name: string | null;
           phone: string | null;

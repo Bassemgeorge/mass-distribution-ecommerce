@@ -78,18 +78,45 @@ useEffect(() => {
     // 1 — resolve customer ID
     let customerId: string;
 
-    if (user && customer) {
-      await supabase
+    if (user) {
+      const { data: existingCustomer, error: findCustomerError } = await supabase
         .from("customers")
-        .update({
-          name: form.contactName,
-          business_name: form.businessName,
-          phone: form.phone,
-          address: `${form.address}, ${form.area}`,
-        })
-        .eq("id", user.id);
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-      customerId = user.id;
+      if (findCustomerError) throw new Error(findCustomerError.message);
+
+      if (existingCustomer) {
+        const { error: updateCustomerError } = await supabase
+          .from("customers")
+          .update({
+            name: form.contactName,
+            business_name: form.businessName,
+            phone: form.phone,
+            address: `${form.address}, ${form.area}`,
+          })
+          .eq("id", existingCustomer.id);
+
+        if (updateCustomerError) throw new Error(updateCustomerError.message);
+        customerId = existingCustomer.id;
+      } else {
+        const { data: newCustomer, error: custErr } = await supabase
+          .from("customers")
+          .insert({
+            user_id: user.id,
+            name: form.contactName,
+            business_name: form.businessName,
+            phone: form.phone,
+            email: user.email ?? null,
+            address: `${form.address}, ${form.area}`,
+          })
+          .select("id")
+          .single();
+
+        if (custErr) throw new Error(custErr.message);
+        customerId = newCustomer.id;
+      }
     } else {
       const { data: newCustomer, error: custErr } = await supabase
         .from("customers")

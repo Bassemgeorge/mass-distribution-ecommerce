@@ -18,9 +18,9 @@ export async function signUp(data: SignUpData) {
   if (authError) return { user: null, needsConfirmation: false, error: authError.message };
   if (!authData.user) return { user: null, needsConfirmation: false, error: "Registration failed." };
 
-  // Insert customer profile using auth user ID as primary key
+  // Link the customer profile to the auth user without reusing its primary key.
   const { error: custError } = await supabase.from("customers").insert({
-    id:            authData.user.id,
+    user_id:       authData.user.id,
     name:          data.contactName,
     business_name: data.businessName,
     phone:         data.phone,

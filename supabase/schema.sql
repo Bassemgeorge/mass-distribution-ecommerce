@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS products (
 -- ── customers ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS customers (
   id             uuid        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id        uuid        UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   business_name  text        NOT NULL,
   contact_name   text,
   phone          text,
@@ -108,6 +109,7 @@ CREATE POLICY "price_lists_insert" ON price_lists FOR INSERT WITH CHECK (true);
 -- ── Useful indexes ────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_products_sku      ON products(sku);
 CREATE INDEX IF NOT EXISTS idx_products_brand    ON products(brand);
+CREATE INDEX IF NOT EXISTS idx_customers_user_id ON customers(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_customer   ON orders(customer_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status     ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created    ON orders(created_at DESC);

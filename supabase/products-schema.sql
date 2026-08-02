@@ -39,6 +39,7 @@ CREATE INDEX idx_products_active   ON products(is_active);
 -- ── 2. customers (no dependencies) ───────────────────────────────────────────
 CREATE TABLE customers (
   id             uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        uuid    UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   name           text    NOT NULL,
   phone          text,
   email          text,
@@ -50,6 +51,7 @@ CREATE TABLE customers (
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "customers_insert" ON customers FOR INSERT WITH CHECK (true);
 CREATE POLICY "customers_select" ON customers FOR SELECT USING (true);
+CREATE INDEX idx_customers_user_id ON customers(user_id);
 
 -- ── 3. orders (depends on customers) ─────────────────────────────────────────
 CREATE TABLE orders (

@@ -4,12 +4,19 @@
 -- ============================================================
 
 -- customers: users can only read/update their own profile
+ALTER TABLE customers
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_user_id ON customers(user_id);
+
 DROP POLICY IF EXISTS "customers_select_own"  ON customers;
 DROP POLICY IF EXISTS "customers_insert_own"  ON customers;
 DROP POLICY IF EXISTS "customers_update_own"  ON customers;
 DROP POLICY IF EXISTS "customers_open_select" ON customers;
 DROP POLICY IF EXISTS "customers_open_insert" ON customers;
 DROP POLICY IF EXISTS "customers_open_update" ON customers;
+DROP POLICY IF EXISTS "customers_read"        ON customers;
+DROP POLICY IF EXISTS "customers_select"      ON customers;
+DROP POLICY IF EXISTS "customers_insert"      ON customers;
 
 -- Allow any authenticated or anon insert (needed for guest checkout + signUp)
 CREATE POLICY "customers_insert_own" ON customers
@@ -18,19 +25,23 @@ CREATE POLICY "customers_insert_own" ON customers
 -- Authenticated users see only their own row; anon sees nothing
 CREATE POLICY "customers_select_own" ON customers
   FOR SELECT USING (
-    auth.uid() IS NOT NULL AND id = auth.uid()
+    auth.uid() IS NOT NULL AND user_id = auth.uid()
   );
 
 -- Users can only update their own row
 CREATE POLICY "customers_update_own" ON customers
-  FOR UPDATE USING (id = auth.uid());
+  FOR UPDATE USING (user_id = auth.uid());
 
 
 -- orders: users see only their own orders
 DROP POLICY IF EXISTS "orders_select_own"  ON orders;
 DROP POLICY IF EXISTS "orders_insert_own"  ON orders;
+DROP POLICY IF EXISTS "orders_insert_any"  ON orders;
 DROP POLICY IF EXISTS "orders_open_select" ON orders;
 DROP POLICY IF EXISTS "orders_open_insert" ON orders;
+DROP POLICY IF EXISTS "orders_read"        ON orders;
+DROP POLICY IF EXISTS "orders_select"      ON orders;
+DROP POLICY IF EXISTS "orders_insert"      ON orders;
 
 -- Any insert (guest checkout goes through anon key, no auth.uid())
 CREATE POLICY "orders_insert_any" ON orders
@@ -39,7 +50,11 @@ CREATE POLICY "orders_insert_any" ON orders
 -- Authenticated users see only their orders
 CREATE POLICY "orders_select_own" ON orders
   FOR SELECT USING (
-    auth.uid() IS NOT NULL AND customer_id = auth.uid()
+    auth.uid() IS NOT NULL AND EXISTS (
+      SELECT 1 FROM customers
+      WHERE customers.id = orders.customer_id
+        AND customers.user_id = auth.uid()
+    )
   );
 
 
@@ -48,6 +63,9 @@ DROP POLICY IF EXISTS "order_items_select_own"  ON order_items;
 DROP POLICY IF EXISTS "order_items_insert_any"  ON order_items;
 DROP POLICY IF EXISTS "order_items_open_select" ON order_items;
 DROP POLICY IF EXISTS "order_items_open_insert" ON order_items;
+DROP POLICY IF EXISTS "order_items_read"        ON order_items;
+DROP POLICY IF EXISTS "order_items_select"      ON order_items;
+DROP POLICY IF EXISTS "order_items_insert"      ON order_items;
 
 CREATE POLICY "order_items_insert_any" ON order_items
   FOR INSERT WITH CHECK (true);
@@ -56,8 +74,9 @@ CREATE POLICY "order_items_select_own" ON order_items
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM orders
+      JOIN customers ON customers.id = orders.customer_id
       WHERE orders.id = order_items.order_id
-        AND orders.customer_id = auth.uid()
+        AND customers.user_id = auth.uid()
     )
   );
 

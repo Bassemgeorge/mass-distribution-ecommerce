@@ -32,8 +32,8 @@ async function fetchCustomerProfile(userId: string): Promise<CustomerProfile | n
   const { data } = await supabase
     .from("customers")
     .select("*")
-    .eq("id", userId)
-    .single();
+    .eq("user_id", userId)
+    .maybeSingle();
   return data as CustomerProfile | null;
 }
 

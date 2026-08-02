@@ -12,7 +12,7 @@ interface OrderItem {
   product_name: string;
   quantity: number;
   unit_price: number;
-  total_price: number;
+  subtotal: number;
 }
 
 interface Order {
@@ -49,16 +49,50 @@ export default function OrdersPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("orders")
-      .select("id, created_at, total, status, notes")
-      .eq("customer_id", user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setOrders((data as Order[]) ?? []);
+    async function fetchOrders() {
+      if (!user) return;
+
+      setOrdersLoading(true);
+
+      try {
+        // Get the customer linked to the logged-in user
+        const { data: customer, error: customerError } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (customerError) {
+          throw customerError;
+        }
+
+        // The logged-in user does not have a customer record yet
+        if (!customer) {
+          setOrders([]);
+          return;
+        }
+
+        // Get only this customer's orders
+        const { data: ordersData, error: ordersError } = await supabase
+          .from("orders")
+          .select("id, created_at, total, status, notes")
+          .eq("customer_id", customer.id)
+          .order("created_at", { ascending: false });
+
+        if (ordersError) {
+          throw ordersError;
+        }
+
+        setOrders((ordersData as Order[]) ?? []);
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+        setOrders([]);
+      } finally {
         setOrdersLoading(false);
-      });
+      }
+    }
+
+    fetchOrders();
   }, [user]);
 
   async function toggleExpand(orderId: string) {
@@ -67,11 +101,15 @@ export default function OrdersPage() {
     const order = orders.find((o) => o.id === orderId);
     if (order?.order_items) return;
     setLoadingItems(orderId);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("order_items")
-      .select("id, product_name, quantity, unit_price, total_price")
+      .select("id, product_name, quantity, unit_price, subtotal")
       .eq("order_id", orderId);
-    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, order_items: (data as OrderItem[]) ?? [] } : o));
+    if (error) {
+      console.error("Failed to fetch order items:", error);
+    } else {
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, order_items: (data as OrderItem[]) ?? [] } : o));
+    }
     setLoadingItems(null);
   }
 
@@ -179,7 +217,7 @@ export default function OrdersPage() {
                                   <td className="py-2.5 text-[#111111] font-medium pr-4">{item.product_name}</td>
                                   <td className="py-2.5 text-right text-gray-500">{item.quantity}</td>
                                   <td className="py-2.5 text-right text-gray-500">EGP {(item.unit_price ?? 0).toLocaleString()}</td>
-                                  <td className="py-2.5 text-right font-semibold text-[#111111]">EGP {(item.total_price ?? 0).toLocaleString()}</td>
+                                  <td className="py-2.5 text-right font-semibold text-[#111111]">EGP {(item.subtotal ?? 0).toLocaleString()}</td>
                                 </tr>
                               ))}
                             </tbody>
