@@ -8,7 +8,6 @@ import ProductCard from "@/components/ProductCard";
 import { getProductById, getProducts, toProduct, MappedProduct } from "@/lib/db";
 import { useCart } from "@/lib/cartStore";
 import { ShoppingCart, Check, ArrowLeft, Package, Zap, Shield, AlertCircle } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -20,9 +19,6 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [error, setError] = useState<string | null>(null);
 
   const { add } = useCart();
-  const { user } = useAuth();
-  const isLoggedIn = !!user;
-
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
 
@@ -115,7 +111,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <AlertCircle size={32} className="mx-auto mb-3 text-red-400" />
-          <p className="text-gray-600 font-medium mb-4">{error ?? "Product not found"}</p>
+          <p className="text-gray-600 font-medium mb-4">
+            {error ?? "Product not found"}
+          </p>
           <Link href="/products" className="text-sm text-[#1B4D2E] font-medium hover:underline">
             ← Back to Products
           </Link>
@@ -161,36 +159,17 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               {product.nameAr}
             </p>
 
-            {isLoggedIn ? (
-              <div className="bg-[#F7F7F5] rounded-xl p-5 mb-4 border border-gray-100">
-                <p className="text-xs font-medium text-gray-400 mb-1">Price per Carton (ex-VAT)</p>
-                <p className="text-3xl font-bold text-[#1B4D2E]">
-                  EGP {formatPrice(product.pricePerCarton)}
-                </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Unit price: EGP {formatPrice(product.pricePerPiece)} / pc
-                </p>
-              </div>
-            ) : (
-              <div className="bg-[#F7F7F5] rounded-xl p-5 mb-4 border border-gray-100">
-                <p className="text-xs font-medium text-gray-400 mb-1">Price per Carton (ex-VAT)</p>
-
-                <p className="text-3xl font-bold text-[#1B4D2E] blur-sm select-none">
-                  EGP {formatPrice(product.pricePerCarton)}
-                </p>
-
-                <p className="text-xs text-gray-400 mt-2">
-                  Login to reveal unit price and place orders
-                </p>
-
-                <Link
-                  href="/account/login"
-                  className="inline-flex mt-4 bg-[#111111] text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-[#1B4D2E] transition-colors"
-                >
-                  Sign In to View Price
-                </Link>
-              </div>
-            )}
+            <div className="bg-[#F7F7F5] rounded-xl p-5 mb-4 border border-gray-100">
+              <p className="text-xs font-medium text-gray-400 mb-1">
+                Price per Carton (ex-VAT)
+              </p>
+              <p className="text-3xl font-bold text-[#1B4D2E]">
+                EGP {formatPrice(product.pricePerCarton)}
+              </p>
+              <p className="text-xs text-gray-400 mt-2">
+                Unit price: EGP {formatPrice(product.pricePerPiece)} / pc
+              </p>
+            </div>
 
             <div className="flex items-center gap-3 bg-[#E8F5E9] border border-green-200 rounded-xl px-4 py-3 mb-4">
               <span className="text-lg">📦</span>
@@ -203,60 +182,60 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
-              <p className="text-xs font-semibold text-amber-700">Minimum order: 1 carton</p>
+              <p className="text-xs font-semibold text-amber-700">
+                Minimum order: 1 carton
+              </p>
               <p className="text-xs text-amber-600 mt-0.5" dir="rtl">
                 الحد الأدنى للطلب: كرتونة واحدة
               </p>
             </div>
 
-            {isLoggedIn && (
-              <>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => setQty(Math.max(1, qty - 1))}
-                        className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors"
-                      >
-                        −
-                      </button>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex flex-col items-center">
+                <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setQty(Math.max(1, qty - 1))}
+                    className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors"
+                  >
+                    −
+                  </button>
 
-                      <span className="px-4 py-2.5 text-sm font-semibold border-x border-gray-200 min-w-[3rem] text-center">
-                        {qty}
-                      </span>
-
-                      <button
-                        onClick={() => setQty(qty + 1)}
-                        className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <p className="text-xs text-gray-400 mt-1">
-                      {qty === 1 ? "1 carton" : `${qty} cartons`} = {qty * product.caseCount} pcs
-                    </p>
-                  </div>
+                  <span className="px-4 py-2.5 text-sm font-semibold border-x border-gray-200 min-w-[3rem] text-center">
+                    {qty}
+                  </span>
 
                   <button
-                    onClick={handleAdd}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                      added ? "bg-[#1B4D2E] text-white" : "bg-[#111111] text-white hover:bg-[#1B4D2E]"
-                    }`}
+                    onClick={() => setQty(qty + 1)}
+                    className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors"
                   >
-                    {added ? <Check size={16} /> : <ShoppingCart size={16} />}
-                    {added ? "Added to Cart!" : "Add to Cart"}
+                    +
                   </button>
                 </div>
 
-                <Link
-                  href="/checkout"
-                  className="text-center border border-gray-200 rounded-lg py-3 font-medium text-sm hover:border-[#1B4D2E] hover:text-[#1B4D2E] transition-colors mb-8"
-                >
-                  Proceed to Checkout
-                </Link>
-              </>
-            )}
+                <p className="text-xs text-gray-400 mt-1">
+                  {qty === 1 ? "1 carton" : `${qty} cartons`} = {qty * product.caseCount} pcs
+                </p>
+              </div>
+
+              <button
+                onClick={handleAdd}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                  added
+                    ? "bg-[#1B4D2E] text-white"
+                    : "bg-[#111111] text-white hover:bg-[#1B4D2E]"
+                }`}
+              >
+                {added ? <Check size={16} /> : <ShoppingCart size={16} />}
+                {added ? "Added to Cart!" : "Add to Cart"}
+              </button>
+            </div>
+
+            <Link
+              href="/checkout"
+              className="text-center border border-gray-200 rounded-lg py-3 font-medium text-sm hover:border-[#1B4D2E] hover:text-[#1B4D2E] transition-colors mb-8"
+            >
+              Proceed to Checkout
+            </Link>
 
             <div className="grid grid-cols-3 gap-3 pt-5 border-t border-gray-100">
               {[

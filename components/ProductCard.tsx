@@ -1,11 +1,10 @@
-"use client";
 
+"use client";
 import Link from "next/link";
 import { useCart, CartProduct } from "@/lib/cartStore";
 import { Check, Minus, Plus, ShoppingCart } from "lucide-react";
 import ProductImage from "./ProductImage";
 import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
 
 interface Props {
   product: CartProduct;
@@ -13,16 +12,14 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const { items, add, update, remove } = useCart();
-  const { user } = useAuth();
-  const isLoggedIn = !!user;
   const [justAdded, setJustAdded] = useState(false);
 
   const cartItem = items.find((i) => i.product.id === product.id);
   const qty = cartItem?.quantity ?? 0;
 
   function formatPrice(value: number) {
-  return Math.round(value).toLocaleString("en-US");
-}
+    return Math.round(value).toLocaleString("en-US");
+  }
 
   function handleAdd(e: React.MouseEvent) {
     e.preventDefault();
@@ -62,74 +59,71 @@ export default function ProductCard({ product }: Props) {
 
       {/* Content */}
       <div className="p-4 flex flex-col flex-1">
-        <span className="text-xs text-gray-400 uppercase tracking-wider mb-1">{product.category}</span>
+        <span className="text-xs text-gray-400 uppercase tracking-wider mb-1">
+          {product.category}
+        </span>
+
         <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-0.5 group-hover:text-[#1B4D2E] transition-colors">
           {product.nameEn}
         </h3>
-        <p className="text-xs text-gray-400 mb-1 text-right" dir="rtl">{product.nameAr}</p>
+
+        <p className="text-xs text-gray-400 mb-1 text-right" dir="rtl">
+          {product.nameAr}
+        </p>
+
         <span className="inline-block bg-[#E8F5E9] text-[#1B4D2E] text-xs font-semibold px-2 py-0.5 rounded-full mt-1">
           {product.caseCount} pcs / carton
         </span>
-     <div className="mt-auto pt-4 flex items-center justify-between gap-2">
-  {isLoggedIn ? (
-    <>
-      <div>
-        <p className="text-xs text-gray-400">Per Carton</p>
-        <span className="text-base font-bold text-[#1B4D2E]">
-         EGP {formatPrice(product.pricePerCarton)}
-        </span>
-        <p className="text-xs text-gray-400 mt-0.5">Min. 1 carton · الحد الأدنى كرتونة</p>
-      </div>
 
-      {qty > 0 ? (
-        <div className="flex items-center border border-[#1B4D2E] rounded-lg overflow-hidden" onClick={(e) => e.preventDefault()}>
-          <button onClick={handleDec} className="px-2 py-1.5 text-[#1B4D2E] hover:bg-[#1B4D2E] hover:text-white transition-colors">
-            <Minus size={12} />
-          </button>
-          <span className="px-2.5 py-1.5 text-xs font-bold text-[#1B4D2E] border-x border-[#1B4D2E] min-w-[1.75rem] text-center">
-            {qty}
-          </span>
-          <button onClick={handleInc} className="px-2 py-1.5 text-[#1B4D2E] hover:bg-[#1B4D2E] hover:text-white transition-colors">
-            <Plus size={12} />
-          </button>
+        <div className="mt-auto pt-4 flex items-center justify-between gap-2">
+          <div>
+            <p className="text-xs text-gray-400">Per Carton</p>
+            <span className="text-base font-bold text-[#1B4D2E]">
+              EGP {formatPrice(product.pricePerCarton)}
+            </span>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Min. 1 carton · الحد الأدنى كرتونة
+            </p>
+          </div>
+
+          {qty > 0 ? (
+            <div
+              className="flex items-center border border-[#1B4D2E] rounded-lg overflow-hidden"
+              onClick={(e) => e.preventDefault()}
+            >
+              <button
+                onClick={handleDec}
+                className="px-2 py-1.5 text-[#1B4D2E] hover:bg-[#1B4D2E] hover:text-white transition-colors"
+              >
+                <Minus size={12} />
+              </button>
+
+              <span className="px-2.5 py-1.5 text-xs font-bold text-[#1B4D2E] border-x border-[#1B4D2E] min-w-[1.75rem] text-center">
+                {qty}
+              </span>
+
+              <button
+                onClick={handleInc}
+                className="px-2 py-1.5 text-[#1B4D2E] hover:bg-[#1B4D2E] hover:text-white transition-colors"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleAdd}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                justAdded
+                  ? "bg-[#1B4D2E] text-white"
+                  : "bg-[#111111] text-white hover:bg-[#1B4D2E]"
+              }`}
+            >
+              {justAdded ? <Check size={13} /> : <ShoppingCart size={13} />}
+              {justAdded ? "Added ✓" : "Add"}
+            </button>
+          )}
         </div>
-      ) : (
-        <button
-          onClick={handleAdd}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
-            justAdded ? "bg-[#1B4D2E] text-white" : "bg-[#111111] text-white hover:bg-[#1B4D2E]"
-          }`}
-        >
-          {justAdded ? <Check size={13} /> : <ShoppingCart size={13} />}
-          {justAdded ? "Added ✓" : "Add"}
-        </button>
-      )}
-    </>
-  ) : (
-     <div className="w-full flex items-end justify-between gap-2">
-  <div>
-    <p className="text-xs text-gray-400">Per Carton</p>
-    <span className="text-base font-bold text-[#1B4D2E] blur-sm select-none">
-     EGP {formatPrice(product.pricePerCarton)}
-    </span>
-    <p className="text-xs text-gray-400 mt-0.5">Login to reveal price</p>
-  </div>
-
-  <button
-    type="button"
-    onClick={(e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  window.location.href = "/account/login";
-}}
-    className="inline-flex justify-center bg-[#111111] text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-[#1B4D2E] transition-colors"
-  >
-    Sign In
-  </button>
-</div>
-  )}
-    </div>
-    </div>
+      </div>
     </Link>
   );
 }
