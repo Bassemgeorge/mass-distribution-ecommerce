@@ -145,7 +145,7 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3">
           <a
-            href="https://wa.me/201000000000"
+            href="https://wa.me/201288895916"
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 flex items-center justify-center gap-2 bg-[#25D366] text-white font-semibold py-3 rounded-xl hover:bg-[#1ebe5d] transition-colors text-sm"

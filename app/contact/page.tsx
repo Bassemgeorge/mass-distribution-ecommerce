@@ -30,8 +30,8 @@ const empty: Form = {
   heardFrom: "Google",
 };
 
-const WHATSAPP_NUMBER = "201124112104";
-const PHONE_NUMBER = "+20 1124112104";
+const WHATSAPP_NUMBER = "201288895916";
+const PHONE_NUMBER = "+20 1288895916";
 const EMAIL = "info@massdistribution.com";
 
 function WhatsAppIcon({ size = 20 }: { size?: number }) {
