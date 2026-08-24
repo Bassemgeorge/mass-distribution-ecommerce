@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import Fuse from "fuse.js";
 import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { getProducts, getCategoryCounts, getBrandCounts, toProduct, MappedProduct } from "@/lib/db";
@@ -65,14 +66,32 @@ function ProductsContent() {
     }
     load();
   }, []);
-  /* filter active categories  activeBrands   */
-  const filtered = allProducts.filter((p) => {
-    const matchCat    = activeCategories.length === 0 || activeCategories.includes(p.category);
-    const matchBrand  = activeBrand    === "All" || p.brand    === activeBrand;
-    const q = search.toLowerCase();
-    const matchSearch = !q || p.nameEn.toLowerCase().includes(q) || p.nameAr.includes(q) || p.brand.toLowerCase().includes(q);
-    return matchCat && matchBrand && matchSearch;
-  });
+  const fuse = useMemo(
+    () =>
+      new Fuse(allProducts, {
+        keys: ["nameEn", "nameAr", "brand", "category"],
+        threshold: 0.35,
+        includeScore: true,
+      }),
+    [allProducts]
+  );
+
+  const filtered = useMemo(() => {
+    const catBrandPool =
+      activeCategories.length === 0 && activeBrand === "All"
+        ? allProducts
+        : allProducts.filter((p) => {
+            const matchCat   = activeCategories.length === 0 || activeCategories.includes(p.category);
+            const matchBrand = activeBrand === "All" || p.brand === activeBrand;
+            return matchCat && matchBrand;
+          });
+
+    if (!search.trim()) return catBrandPool;
+
+    const fuseResults = fuse.search(search).map((r) => r.item);
+    const matchIds = new Set(fuseResults.map((p) => p.id));
+    return catBrandPool.filter((p) => matchIds.has(p.id));
+  }, [allProducts, activeCategories, activeBrand, search, fuse]);
 
   const hasActiveFilters =
   activeCategories.length > 0 ||
