@@ -213,6 +213,25 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
        
       </section>
 
+      {/* ── WADI FOOD SALE BANNER ────────────────────────────────────────── */}
+      <section className="bg-red-600 text-white py-3 px-4">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🏷️</span>
+            <div>
+              <span className="font-bold text-sm sm:text-base">Wadi Food Sale — Limited Time Offer!</span>
+              <span className="hidden sm:inline text-red-200 text-sm ml-2">Special prices on selected Wadi Food products</span>
+            </div>
+          </div>
+          <a
+            href="/products?sale=true"
+            className="bg-white text-red-600 font-bold text-xs sm:text-sm px-4 py-1.5 rounded-full hover:bg-red-50 transition-colors whitespace-nowrap"
+          >
+            Shop Sale →
+          </a>
+        </div>
+      </section>
+
       {/* ── SEARCH BAR ───────────────────────────────────────────────────── */}
       <section className="bg-white border-b border-gray-100 py-7 px-4 shadow-sm">
         <HomeSearchBar />

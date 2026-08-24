@@ -21,12 +21,14 @@ function ProductsContent() {
   const [activeBrand,    setActiveBrand]    = useState("All");
   const [search,         setSearch]         = useState("");
   const [showFilters,    setShowFilters]    = useState(false);
+  const [saleOnly,       setSaleOnly]       = useState(false);
 
   // Init filters from URL params
  useEffect(() => {
   const cat = searchParams.get("category");
   const brand = searchParams.get("brand");
   const searchValue = searchParams.get("search");
+  const saleParam = searchParams.get("sale");
 
   setActiveCategories((prev) => {
     const next = cat ? [cat] : [];
@@ -40,6 +42,11 @@ function ProductsContent() {
 
   setSearch((prev) => {
     const next = searchValue ?? "";
+    return prev === next ? prev : next;
+  });
+
+  setSaleOnly((prev) => {
+    const next = saleParam === "true";
     return prev === next ? prev : next;
   });
 }, [searchParams]);
@@ -87,22 +94,26 @@ function ProductsContent() {
             return matchCat && matchBrand;
           });
 
-    if (!search.trim()) return catBrandPool;
+    const salePool = saleOnly ? catBrandPool.filter((p) => p.onSale) : catBrandPool;
+
+    if (!search.trim()) return salePool;
 
     const fuseResults = fuse.search(search).map((r) => r.item);
     const matchIds = new Set(fuseResults.map((p) => p.id));
-    return catBrandPool.filter((p) => matchIds.has(p.id));
-  }, [allProducts, activeCategories, activeBrand, search, fuse]);
+    return salePool.filter((p) => matchIds.has(p.id));
+  }, [allProducts, activeCategories, activeBrand, search, saleOnly, fuse]);
 
   const hasActiveFilters =
   activeCategories.length > 0 ||
   activeBrand !== "All" ||
-  search !== "";
+  search !== "" ||
+  saleOnly;
 
   function clearAll() {
   setActiveCategories([]);
   setActiveBrand("All");
   setSearch("");
+  setSaleOnly(false);
 }
   return (
     <div className="min-h-screen bg-white">
@@ -138,6 +149,14 @@ function ProductsContent() {
               className="w-full border border-gray-200 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-[#1B4D2E] transition-colors bg-white"
             />
           </div>
+          <button
+            onClick={() => setSaleOnly((v) => !v)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 border rounded-lg text-sm font-medium transition-colors ${
+              saleOnly ? "border-red-500 bg-red-600 text-white" : "border-gray-200 text-gray-600 hover:border-red-300 bg-white"
+            }`}
+          >
+            🏷️ Sale
+          </button>
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium transition-colors ${

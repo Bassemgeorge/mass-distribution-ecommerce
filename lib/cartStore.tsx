@@ -16,6 +16,8 @@ export interface CartProduct {
   pricePerCarton: number; // selling price — 1 carton minimum
   hasTax: boolean;
   image: string;
+  onSale?: boolean;
+  originalCartonPrice?: number | null;
 }
 
 export interface CartItem {
