@@ -224,7 +224,7 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
             </div>
           </div>
           <a
-            href="/products?sale=true"
+            href="/products?brand=Wadifood"
             className="bg-white text-red-600 font-bold text-xs sm:text-sm px-4 py-1.5 rounded-full hover:bg-red-50 transition-colors whitespace-nowrap"
           >
             Shop Sale →
