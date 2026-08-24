@@ -70,7 +70,8 @@ function ProductsContent() {
     () =>
       new Fuse(allProducts, {
         keys: ["nameEn", "nameAr", "brand", "category"],
-        threshold: 0.35,
+        // 0.5 = more permissive: catches worse typos at the cost of a few extra loose matches
+        threshold: 0.5,
         includeScore: true,
       }),
     [allProducts]
