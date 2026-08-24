@@ -23,7 +23,7 @@ export interface DbProduct {
   image_url: string | null;
   is_active: boolean;
   stock: number;
-  on_sale: boolean | null;
+  is_on_sale: boolean | null;
   original_carton_price: number | null;
 }
 
@@ -51,7 +51,7 @@ export function toProduct(p: DbProduct) {
     pricePerCarton: p.carton_price ?? p.price * caseCount,
     hasTax: false,
     image: p.image_url ?? "/placeholder-product.svg",
-    onSale: p.on_sale ?? false,
+    onSale: p.is_on_sale ?? false,
     originalCartonPrice: p.original_carton_price ?? null,
   };
 }
