@@ -85,23 +85,23 @@ function ProductsContent() {
   );
 
   const filtered = useMemo(() => {
-    const catBrandPool =
-      activeCategories.length === 0 && activeBrand === "All"
-        ? allProducts
-        : allProducts.filter((p) => {
-            const matchCat   = activeCategories.length === 0 || activeCategories.includes(p.category);
-            const matchBrand = activeBrand === "All" || p.brand === activeBrand;
-            return matchCat && matchBrand;
-          });
+    const catBrandPool = allProducts.filter((p) => {
+      const matchCat   = activeCategories.length === 0 || activeCategories.includes(p.category);
+      const matchBrand = activeBrand === "All" || p.brand === activeBrand;
+      const matchSale  = !saleOnly || p.isOnSale;
+      return matchCat && matchBrand && matchSale;
+    });
 
-    const salePool = saleOnly ? catBrandPool.filter((p) => p.onSale) : catBrandPool;
+    if (!search.trim()) return catBrandPool;
 
-    if (!search.trim()) return salePool;
-
-    const fuseResults = fuse.search(search).map((r) => r.item);
-    const matchIds = new Set(fuseResults.map((p) => p.id));
-    return salePool.filter((p) => matchIds.has(p.id));
-  }, [allProducts, activeCategories, activeBrand, search, saleOnly, fuse]);
+    // fuse.search() already returns results ordered best-match-first — preserve
+    // that order instead of falling back to the original catalog order.
+    const poolIds = new Set(catBrandPool.map((p) => p.id));
+    return fuse
+      .search(search)
+      .map((r) => r.item)
+      .filter((p) => poolIds.has(p.id));
+  }, [allProducts, activeCategories, activeBrand, saleOnly, search, fuse]);
 
   const hasActiveFilters =
   activeCategories.length > 0 ||

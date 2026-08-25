@@ -55,7 +55,7 @@ export default function ProductCard({ product }: Props) {
         <span className="absolute top-3 left-3 bg-[#1B4D2E] text-white text-xs font-medium px-2.5 py-1 rounded-full">
           {product.brand}
         </span>
-        {product.onSale && (
+        {product.isOnSale && (
           <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
             Sale
           </span>
@@ -83,12 +83,12 @@ export default function ProductCard({ product }: Props) {
         <div className="mt-auto pt-4 flex items-center justify-between gap-2">
           <div>
             <p className="text-xs text-gray-400">Per Carton</p>
-            {product.onSale && product.originalCartonPrice ? (
+            {product.isOnSale && product.originalCartonPrice ? (
               <p className="text-xs text-gray-400 line-through leading-none mb-0.5">
                 EGP {formatPrice(product.originalCartonPrice)}
               </p>
             ) : null}
-            <span className={`text-base font-bold ${product.onSale ? "text-red-600" : "text-[#1B4D2E]"}`}>
+            <span className={`text-base font-bold ${product.isOnSale ? "text-red-600" : "text-[#1B4D2E]"}`}>
               EGP {formatPrice(product.pricePerCarton)}
             </span>
             <p className="text-xs text-gray-400 mt-0.5">

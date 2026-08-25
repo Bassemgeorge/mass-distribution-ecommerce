@@ -149,7 +149,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
                 {product.category}
               </span>
-              {product.onSale && (
+              {product.isOnSale && (
                 <span className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
                   Sale
                 </span>
@@ -164,16 +164,16 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               {product.nameAr}
             </p>
 
-            <div className={`rounded-xl p-5 mb-4 border ${product.onSale ? "bg-red-50 border-red-200" : "bg-[#F7F7F5] border-gray-100"}`}>
+            <div className={`rounded-xl p-5 mb-4 border ${product.isOnSale ? "bg-red-50 border-red-200" : "bg-[#F7F7F5] border-gray-100"}`}>
               <p className="text-xs font-medium text-gray-400 mb-1">
                 Price per Carton (ex-VAT)
               </p>
-              {product.onSale && product.originalCartonPrice ? (
+              {product.isOnSale && product.originalCartonPrice ? (
                 <p className="text-sm text-gray-400 line-through mb-0.5">
                   EGP {formatPrice(product.originalCartonPrice)}
                 </p>
               ) : null}
-              <p className={`text-3xl font-bold ${product.onSale ? "text-red-600" : "text-[#1B4D2E]"}`}>
+              <p className={`text-3xl font-bold ${product.isOnSale ? "text-red-600" : "text-[#1B4D2E]"}`}>
                 EGP {formatPrice(product.pricePerCarton)}
               </p>
               <p className="text-xs text-gray-400 mt-2">

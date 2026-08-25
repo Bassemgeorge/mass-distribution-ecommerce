@@ -51,7 +51,7 @@ export function toProduct(p: DbProduct) {
     pricePerCarton: p.carton_price ?? p.price * caseCount,
     hasTax: false,
     image: p.image_url ?? "/placeholder-product.svg",
-    onSale: p.is_on_sale ?? false,
+    isOnSale: p.is_on_sale ?? false,
     originalCartonPrice: p.original_carton_price ?? null,
   };
 }
