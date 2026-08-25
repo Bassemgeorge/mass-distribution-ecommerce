@@ -145,7 +145,18 @@ function ProductsContent() {
               type="text"
               placeholder="Search products in English or Arabic..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                // Starting a fresh search (box was empty, now has text) — drop any
+                // active brand/category/sale filters so the search isn't silently
+                // scoped down to a subset the user didn't intend.
+                if (search.trim() === "" && val.trim() !== "") {
+                  setActiveCategories([]);
+                  setActiveBrand("All");
+                  setSaleOnly(false);
+                }
+                setSearch(val);
+              }}
               className="w-full border border-gray-200 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-[#1B4D2E] transition-colors bg-white"
             />
           </div>
