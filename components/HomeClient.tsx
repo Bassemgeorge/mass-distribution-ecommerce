@@ -40,56 +40,86 @@ function PromoBanner() {
 
   const slides = [
     {
-      bg: "bg-red-600",
-      content: (
-        <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🏷️</span>
-            <div>
-              <span className="font-bold text-sm sm:text-base">Wadi Food Sale — Limited Time Offer!</span>
-              <span className="hidden sm:inline text-red-200 text-sm ml-2">
-                Ends in {days}d {hours}h {mins}m
-              </span>
-            </div>
-          </div>
-          <a href="/products?brand=Wadifood" className="bg-white text-red-600 font-bold text-xs sm:text-sm px-4 py-1.5 rounded-full hover:bg-red-50 transition-colors whitespace-nowrap">
-            Shop Sale →
-          </a>
-        </div>
-      ),
+      gradient: "from-[#E63946] via-[#d92e3b] to-[#8f1319]",
+      accent: "text-[#E63946]",
+      badge: "Limited Time",
+      headline: "10% Off Wadi Food",
+      headlineAr: "خصم ١٠٪ على وادي فوود",
+      sub: "Olive oil, olives & pickles — while stock lasts",
+      countdown: `Ends in ${days}d ${hours}h ${mins}m`,
+      cta: "Shop the Sale",
+      href: "/products?brand=Wadifood",
+      image: "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/product-images/wadifood/6223000190418.png",
+      imageAlt: "Wadi Food Extra Virgin Olive Oil",
     },
     {
-      bg: "bg-[#1B4D2E]",
-      content: (
-        <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🦍</span>
-            <div>
-              <span className="font-bold text-sm sm:text-base">Gorilla Energy Drinks just landed!</span>
-              <span className="hidden sm:inline text-green-200 text-sm ml-2">Now available for HORECA orders</span>
-            </div>
-          </div>
-          <a href="/products?brand=Gorilla" className="bg-white text-[#1B4D2E] font-bold text-xs sm:text-sm px-4 py-1.5 rounded-full hover:bg-green-50 transition-colors whitespace-nowrap">
-            Order Now →
-          </a>
-        </div>
-      ),
+      gradient: "from-[#1B4D2E] via-[#153d24] to-[#081c10]",
+      accent: "text-[#1B4D2E]",
+      badge: "New Arrival",
+      headline: "Gorilla Energy Drinks",
+      headlineAr: "مشروبات الطاقة جوريلا",
+      sub: "3 bold flavors just landed — order today",
+      countdown: null as string | null,
+      cta: "Shop Gorilla",
+      href: "/products?brand=Gorilla",
+      image: "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/product-images/Gorilla%20Energy%20Drink%20250ml%20-%20Mango%20Coconut%20(1).png",
+      imageAlt: "Gorilla Energy Drink Mango Coconut",
     },
   ];
 
   return (
-    <section className={`${slides[slide].bg} text-white py-3 px-4 transition-colors duration-500`}>
-      <div className="max-w-7xl mx-auto flex items-center gap-4">
-        <div className="flex-1">{slides[slide].content}</div>
-        <div className="flex gap-1.5 shrink-0">
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setSlide(i)}
-              className={`w-2 h-2 rounded-full transition-colors ${i === slide ? "bg-white" : "bg-white/40"}`}
-            />
-          ))}
-        </div>
+    <section className="relative overflow-hidden" style={{ minHeight: 220 }}>
+      {slides.map((s, i) => (
+        <a
+          key={s.href}
+          href={s.href}
+          aria-hidden={i !== slide}
+          tabIndex={i === slide ? 0 : -1}
+          className={`group block bg-gradient-to-br ${s.gradient} transition-opacity duration-700 ${
+            i === slide ? "relative opacity-100" : "absolute inset-0 opacity-0 pointer-events-none"
+          }`}
+        >
+          <div className="absolute -top-16 -right-10 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-20 left-1/3 w-72 h-72 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+
+          <div className="relative max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 py-10 sm:py-0 sm:h-[220px] flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex-1 text-center sm:text-left order-2 sm:order-1">
+              <span className={`inline-block bg-white ${s.accent} text-xs font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full mb-3`}>
+                {s.badge}
+              </span>
+              <h3 className="text-white text-2xl sm:text-3xl font-extrabold leading-tight mb-1">{s.headline}</h3>
+              <p className="text-white/60 text-sm mb-2" dir="rtl">{s.headlineAr}</p>
+              <p className="text-white/85 text-sm sm:text-base font-medium mb-4">
+                {s.sub}
+                {s.countdown && <span className="block sm:inline sm:ml-1 font-bold text-white"> · {s.countdown}</span>}
+              </p>
+              <span className={`inline-flex items-center gap-1.5 bg-white ${s.accent} font-bold text-sm px-5 py-2.5 rounded-full group-hover:bg-gray-100 transition-colors shadow-lg`}>
+                {s.cta} <ArrowRight size={15} />
+              </span>
+            </div>
+
+            <div className="order-1 sm:order-2 shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={s.image}
+                alt={s.imageAlt}
+                className="h-32 sm:h-44 w-auto object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </a>
+      ))}
+
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+        {slides.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setSlide(i)}
+            aria-label={`Show promo ${i + 1}`}
+            className={`h-1.5 rounded-full transition-all ${i === slide ? "w-6 bg-white" : "w-1.5 bg-white/40"}`}
+          />
+        ))}
       </div>
     </section>
   );
