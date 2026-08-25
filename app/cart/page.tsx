@@ -1,10 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "@/lib/cartStore";
 import { Trash2, ArrowRight, ShoppingBag } from "lucide-react";
 import ProductImage from "@/components/ProductImage";
+
+// Typeable quantity input — lets B2B buyers enter large carton counts directly
+// instead of clicking +/- repeatedly. Falls back to 1 on blur if left invalid.
+function QtyInput({ quantity, onChange }: { quantity: number; onChange: (q: number) => void }) {
+  const [raw, setRaw] = useState(String(quantity));
+
+  useEffect(() => {
+    setRaw(String(quantity));
+  }, [quantity]);
+
+  function commit() {
+    const n = parseInt(raw, 10);
+    if (!raw.trim() || isNaN(n) || n < 1) {
+      setRaw(String(quantity));
+      return;
+    }
+    onChange(n);
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={raw}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (/^\d*$/.test(v)) setRaw(v);
+      }}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+      className="w-14 px-1 py-1.5 text-sm font-semibold border-x border-gray-200 text-center focus:outline-none focus:bg-gray-50"
+    />
+  );
+}
 
 export default function CartPage() {
 const { items, remove, update, total, count } = useCart();
@@ -64,7 +100,7 @@ const belowMinimum = total < MIN_ORDER_TOTAL;
                     onClick={() => quantity > 1 ? update(product.id, quantity - 1) : remove(product.id)}
                     className="px-2.5 py-1.5 text-sm font-semibold hover:bg-gray-50 transition-colors"
                   >−</button>
-                  <span className="px-2.5 py-1.5 text-sm font-semibold border-x border-gray-200 min-w-[2rem] text-center">{quantity}</span>
+                  <QtyInput quantity={quantity} onChange={(q) => update(product.id, q)} />
                   <button
                     onClick={() => update(product.id, quantity + 1)}
                     className="px-2.5 py-1.5 text-sm font-semibold hover:bg-gray-50 transition-colors"

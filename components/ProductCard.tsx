@@ -4,10 +4,47 @@ import Link from "next/link";
 import { useCart, CartProduct } from "@/lib/cartStore";
 import { Check, Minus, Plus, ShoppingCart } from "lucide-react";
 import ProductImage from "./ProductImage";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Props {
   product: CartProduct;
+}
+
+// Typeable quantity input — lets B2B buyers enter large carton counts directly
+// instead of clicking +/- repeatedly. Falls back to previous value if left invalid.
+function QtyInput({ quantity, onChange }: { quantity: number; onChange: (q: number) => void }) {
+  const [raw, setRaw] = useState(String(quantity));
+
+  useEffect(() => {
+    setRaw(String(quantity));
+  }, [quantity]);
+
+  function commit() {
+    const n = parseInt(raw, 10);
+    if (!raw.trim() || isNaN(n) || n < 1) {
+      setRaw(String(quantity));
+      return;
+    }
+    onChange(n);
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={raw}
+      onClick={(e) => e.preventDefault()}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (/^\d*$/.test(v)) setRaw(v);
+      }}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+      className="w-9 px-0.5 py-1.5 text-xs font-bold text-[#1B4D2E] border-x border-[#1B4D2E] text-center focus:outline-none focus:bg-[#E8F5E9]"
+    />
+  );
 }
 
 export default function ProductCard({ product }: Props) {
@@ -108,9 +145,7 @@ export default function ProductCard({ product }: Props) {
                 <Minus size={12} />
               </button>
 
-              <span className="px-2.5 py-1.5 text-xs font-bold text-[#1B4D2E] border-x border-[#1B4D2E] min-w-[1.75rem] text-center">
-                {qty}
-              </span>
+              <QtyInput quantity={qty} onChange={(q) => update(product.id, q)} />
 
               <button
                 onClick={handleInc}

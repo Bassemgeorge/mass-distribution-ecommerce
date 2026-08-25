@@ -21,6 +21,13 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const { add } = useCart();
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
+  // Mirrors `qty` as text so the field can be typed into directly (e.g. "500")
+  // instead of requiring 500 clicks on the +/- buttons.
+  const [qtyInput, setQtyInput] = useState("1");
+
+  useEffect(() => {
+    setQtyInput(String(qty));
+  }, [qty]);
 
   function formatPrice(value: number) {
     return Math.round(value).toLocaleString("en-US");
@@ -210,9 +217,28 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     −
                   </button>
 
-                  <span className="px-4 py-2.5 text-sm font-semibold border-x border-gray-200 min-w-[3rem] text-center">
-                    {qty}
-                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={qtyInput}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (/^\d*$/.test(v)) setQtyInput(v);
+                    }}
+                    onBlur={() => {
+                      const n = parseInt(qtyInput, 10);
+                      if (!qtyInput.trim() || isNaN(n) || n < 1) {
+                        setQtyInput(String(qty));
+                        return;
+                      }
+                      setQty(n);
+                      setQtyInput(String(n));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    }}
+                    className="px-4 py-2.5 text-sm font-semibold border-x border-gray-200 min-w-[3rem] w-16 text-center focus:outline-none focus:bg-gray-50"
+                  />
 
                   <button
                     onClick={() => setQty(qty + 1)}
