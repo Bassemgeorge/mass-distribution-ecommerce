@@ -92,7 +92,7 @@ export default function Footer() {
             <h4 className="text-white font-semibold text-sm mb-4">Contact</h4>
             <ul className="space-y-2.5 text-sm">
               <li className="text-white/60">
-                Mobile: <a href="tel:+201124112104" className="hover:text-white transition-colors">+20 1124112104</a>
+                Mobile: <a href="tel:+201288895916" className="hover:text-white transition-colors">+20 1288895916</a>
               </li>
               <li className="text-white/60">
                 Email: <a href="mailto:info@massdistribution.com" className="hover:text-white transition-colors">info@massdistribution.com</a>
