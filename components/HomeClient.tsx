@@ -375,6 +375,60 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
         </div>
       </section>
 
+      {/* ── EXCLUSIVE 5L OLIVE OIL SPOTLIGHT ─────────────────────────────── */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0d1f14] via-[#122b1c] to-[#0a1810] py-16">
+        <div className="absolute top-0 left-1/4 w-96 h-96 rounded-full bg-[#D4AF37]/10 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-[#1B4D2E]/40 blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="text-center lg:text-left order-2 lg:order-1">
+              <span className="inline-flex items-center gap-2 bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-extrabold uppercase tracking-widest px-4 py-2 rounded-full mb-5">
+                ⭐ Exclusive to Mass Distribution
+              </span>
+              <h2 className="text-white text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight mb-3">
+                The Only 5L Wadi Food<br />Olive Oil in Egypt
+              </h2>
+              <p className="text-white/40 text-sm mb-4" dir="rtl">
+                الزيت الوحيد بحجم 5 لتر من وادي فوود في مصر — متوفر حصريًا لدينا
+              </p>
+              <p className="text-white/70 text-base leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
+                No other distributor carries the Wadi Food 5L bottle — Virgin or Extra Virgin. If your kitchen goes through olive oil fast, this is the size built for you, and you can only get it here.
+              </p>
+              <div className="flex flex-wrap justify-center lg:justify-start gap-3">
+                <Link href="/products/12" className="inline-flex items-center gap-2 bg-white text-[#0d1f14] font-bold px-6 py-3.5 rounded-full hover:bg-gray-100 transition-colors text-sm shadow-xl">
+                  Shop Virgin 5L <ArrowRight size={16} />
+                </Link>
+                <Link href="/products/13" className="inline-flex items-center gap-2 border-2 border-[#D4AF37]/60 text-[#D4AF37] font-bold px-6 py-3.5 rounded-full hover:bg-[#D4AF37]/10 transition-colors text-sm">
+                  Shop Extra Virgin 5L <ArrowRight size={16} />
+                </Link>
+              </div>
+            </div>
+
+            <div className="order-1 lg:order-2 flex items-center justify-center gap-4 sm:gap-6">
+              <Link href="/products/12" className="group bg-[#F7F7F5] rounded-3xl p-5 sm:p-6 shadow-2xl hover:-translate-y-2 transition-transform duration-300">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/product-images/oil%26Ghee/virgin_5L_on_white.png"
+                  alt="Wadi Food Virgin Olive Oil 5L"
+                  className="h-56 sm:h-72 w-auto object-contain"
+                  loading="lazy"
+                />
+              </Link>
+              <Link href="/products/13" className="group bg-[#F7F7F5] rounded-3xl p-5 sm:p-6 shadow-2xl hover:-translate-y-2 transition-transform duration-300 mt-6 sm:mt-10">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/product-images/oil%26Ghee/extravirgin_5L_on_white.png"
+                  alt="Wadi Food Extra Virgin Olive Oil 5L"
+                  className="h-64 sm:h-80 w-auto object-contain"
+                  loading="lazy"
+                />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── CATEGORIES ───────────────────────────────────────────────────── */}
       <section className="bg-white py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
