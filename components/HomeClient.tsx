@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import ProductCard from "@/components/ProductCard";
 import HomeSearchBar from "@/components/HomeSearchBar";
 import {
@@ -9,6 +10,90 @@ import {
 } from "lucide-react";
 import { toProduct } from "@/lib/db";
 import HeroCarousel from "@/components/HeroCarousel";
+
+// ── Promo carousel ────────────────────────────────────────────────────────────
+const SALE_END = new Date("2026-09-07T09:00:00+03:00"); // Cairo time
+
+function useCountdown(target: Date) {
+  const calc = () => {
+    const diff = target.getTime() - Date.now();
+    if (diff <= 0) return { days: 0, hours: 0, mins: 0 };
+    const s = Math.floor(diff / 1000);
+    return { days: Math.floor(s / 86400), hours: Math.floor((s % 86400) / 3600), mins: Math.floor((s % 3600) / 60) };
+  };
+  const [t, setT] = useState(calc);
+  useEffect(() => {
+    const id = setInterval(() => setT(calc()), 60000);
+    return () => clearInterval(id);
+  });
+  return t;
+}
+
+function PromoBanner() {
+  const [slide, setSlide] = useState(0);
+  const { days, hours, mins } = useCountdown(SALE_END);
+
+  useEffect(() => {
+    const id = setInterval(() => setSlide((s) => (s + 1) % 2), 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  const slides = [
+    {
+      bg: "bg-red-600",
+      content: (
+        <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🏷️</span>
+            <div>
+              <span className="font-bold text-sm sm:text-base">Wadi Food Sale — Limited Time Offer!</span>
+              <span className="hidden sm:inline text-red-200 text-sm ml-2">
+                Ends in {days}d {hours}h {mins}m
+              </span>
+            </div>
+          </div>
+          <a href="/products?brand=Wadifood" className="bg-white text-red-600 font-bold text-xs sm:text-sm px-4 py-1.5 rounded-full hover:bg-red-50 transition-colors whitespace-nowrap">
+            Shop Sale →
+          </a>
+        </div>
+      ),
+    },
+    {
+      bg: "bg-[#1B4D2E]",
+      content: (
+        <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🦍</span>
+            <div>
+              <span className="font-bold text-sm sm:text-base">Gorilla Energy Drinks just landed!</span>
+              <span className="hidden sm:inline text-green-200 text-sm ml-2">Now available for HORECA orders</span>
+            </div>
+          </div>
+          <a href="/products?brand=Gorilla" className="bg-white text-[#1B4D2E] font-bold text-xs sm:text-sm px-4 py-1.5 rounded-full hover:bg-green-50 transition-colors whitespace-nowrap">
+            Order Now →
+          </a>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <section className={`${slides[slide].bg} text-white py-3 px-4 transition-colors duration-500`}>
+      <div className="max-w-7xl mx-auto flex items-center gap-4">
+        <div className="flex-1">{slides[slide].content}</div>
+        <div className="flex gap-1.5 shrink-0">
+          {slides.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setSlide(i)}
+              className={`w-2 h-2 rounded-full transition-colors ${i === slide ? "bg-white" : "bg-white/40"}`}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 // ── Category config ───────────────────────────────────────────────────────────
 const CATEGORY_CONFIG: Record<
@@ -213,24 +298,8 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
        
       </section>
 
-      {/* ── WADI FOOD SALE BANNER ────────────────────────────────────────── */}
-      <section className="bg-red-600 text-white py-3 px-4">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🏷️</span>
-            <div>
-              <span className="font-bold text-sm sm:text-base">Wadi Food Sale — Limited Time Offer!</span>
-              <span className="hidden sm:inline text-red-200 text-sm ml-2">Special prices on selected Wadi Food products</span>
-            </div>
-          </div>
-          <a
-            href="/products?brand=Wadifood"
-            className="bg-white text-red-600 font-bold text-xs sm:text-sm px-4 py-1.5 rounded-full hover:bg-red-50 transition-colors whitespace-nowrap"
-          >
-            Shop Sale →
-          </a>
-        </div>
-      </section>
+      {/* ── PROMO CAROUSEL ───────────────────────────────────────────────── */}
+      <PromoBanner />
 
       {/* ── SEARCH BAR ───────────────────────────────────────────────────── */}
       <section className="bg-white border-b border-gray-100 py-7 px-4 shadow-sm">
