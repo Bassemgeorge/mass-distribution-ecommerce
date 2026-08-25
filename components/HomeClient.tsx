@@ -40,9 +40,10 @@ function PromoBanner() {
 
   const slides = [
     {
-      gradient: "from-[#E63946] via-[#d92e3b] to-[#8f1319]",
+      gradient: "from-[#7a0f14] via-[#c8202c] to-[#E63946]",
       accent: "text-[#E63946]",
       badge: "Limited Time",
+      watermark: "%",
       headline: "10% Off Wadi Food",
       headlineAr: "خصم ١٠٪ على وادي فوود",
       sub: "Olive oil, olives & pickles — while stock lasts",
@@ -53,9 +54,10 @@ function PromoBanner() {
       imageAlt: "Wadi Food Extra Virgin Olive Oil",
     },
     {
-      gradient: "from-[#1B4D2E] via-[#153d24] to-[#081c10]",
+      gradient: "from-[#081c10] via-[#153d24] to-[#1B4D2E]",
       accent: "text-[#1B4D2E]",
       badge: "New Arrival",
+      watermark: "NEW",
       headline: "Gorilla Energy Drinks",
       headlineAr: "مشروبات الطاقة جوريلا",
       sub: "3 bold flavors just landed — order today",
@@ -68,7 +70,7 @@ function PromoBanner() {
   ];
 
   return (
-    <section className="relative overflow-hidden" style={{ minHeight: 220 }}>
+    <section className="relative overflow-hidden" style={{ minHeight: 260 }}>
       {slides.map((s, i) => (
         <a
           key={s.href}
@@ -79,31 +81,49 @@ function PromoBanner() {
             i === slide ? "relative opacity-100" : "absolute inset-0 opacity-0 pointer-events-none"
           }`}
         >
-          <div className="absolute -top-16 -right-10 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-20 left-1/3 w-72 h-72 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+          {/* Giant translucent watermark */}
+          <div className="hidden sm:flex absolute inset-y-0 right-0 items-center pr-4 pointer-events-none select-none overflow-hidden">
+            <span
+              className="text-white/10 font-black leading-none whitespace-nowrap"
+              style={{ fontSize: "min(20vw, 200px)" }}
+            >
+              {s.watermark}
+            </span>
+          </div>
 
-          <div className="relative max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 py-10 sm:py-0 sm:h-[220px] flex flex-col sm:flex-row items-center justify-between gap-6">
+          {/* Spotlight glow behind product image */}
+          <div
+            className="absolute top-1/2 right-[10%] -translate-y-1/2 w-72 h-72 sm:w-96 sm:h-96 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 70%)" }}
+          />
+          <div className="absolute -bottom-24 left-1/4 w-72 h-72 rounded-full bg-black/10 blur-3xl pointer-events-none" />
+
+          <div className="relative max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 py-10 sm:py-0 sm:h-[260px] flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex-1 text-center sm:text-left order-2 sm:order-1">
-              <span className={`inline-block bg-white ${s.accent} text-xs font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full mb-3`}>
+              <span className={`inline-block bg-white ${s.accent} text-xs font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full mb-3 shadow-md`}>
                 {s.badge}
               </span>
-              <h3 className="text-white text-2xl sm:text-3xl font-extrabold leading-tight mb-1">{s.headline}</h3>
+              <h3 className="text-white text-3xl sm:text-4xl font-extrabold leading-tight mb-1 tracking-tight">
+                {s.headline}
+              </h3>
               <p className="text-white/60 text-sm mb-2" dir="rtl">{s.headlineAr}</p>
-              <p className="text-white/85 text-sm sm:text-base font-medium mb-4">
+              <p className="text-white/85 text-sm sm:text-base font-medium mb-5">
                 {s.sub}
-                {s.countdown && <span className="block sm:inline sm:ml-1 font-bold text-white"> · {s.countdown}</span>}
+                {s.countdown && (
+                  <span className="block sm:inline sm:ml-1 font-bold text-white"> · {s.countdown}</span>
+                )}
               </p>
-              <span className={`inline-flex items-center gap-1.5 bg-white ${s.accent} font-bold text-sm px-5 py-2.5 rounded-full group-hover:bg-gray-100 transition-colors shadow-lg`}>
+              <span className={`inline-flex items-center gap-1.5 bg-white ${s.accent} font-bold text-sm px-6 py-3 rounded-full group-hover:bg-gray-100 group-hover:scale-105 transition-all duration-300 shadow-xl`}>
                 {s.cta} <ArrowRight size={15} />
               </span>
             </div>
 
-            <div className="order-1 sm:order-2 shrink-0">
+            <div className="relative order-1 sm:order-2 shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={s.image}
                 alt={s.imageAlt}
-                className="h-32 sm:h-44 w-auto object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-500"
+                className="relative h-36 sm:h-52 w-auto object-contain drop-shadow-2xl group-hover:scale-110 group-hover:-rotate-2 transition-transform duration-500"
                 loading="lazy"
               />
             </div>
