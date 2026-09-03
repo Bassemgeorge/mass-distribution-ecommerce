@@ -7,7 +7,8 @@ import ProductImage from "@/components/ProductImage";
 import ProductCard from "@/components/ProductCard";
 import { getProductById, getProducts, toProduct, MappedProduct } from "@/lib/db";
 import { useCart } from "@/lib/cartStore";
-import { ShoppingCart, Check, ArrowLeft, Package, Zap, Shield, AlertCircle } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { ShoppingCart, Check, ArrowLeft, Lock, Package, Zap, Shield, AlertCircle } from "lucide-react";
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -19,10 +20,10 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [error, setError] = useState<string | null>(null);
 
   const { add } = useCart();
+  const { user, loading: authLoading } = useAuth();
+  const isLoggedIn = !!user;
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
-  // Mirrors `qty` as text so the field can be typed into directly (e.g. "500")
-  // instead of requiring 500 clicks on the +/- buttons.
   const [qtyInput, setQtyInput] = useState("1");
 
   useEffect(() => {
@@ -171,22 +172,36 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               {product.nameAr}
             </p>
 
-            <div className={`rounded-xl p-5 mb-4 border ${product.isOnSale ? "bg-red-50 border-red-200" : "bg-[#F7F7F5] border-gray-100"}`}>
-              <p className="text-xs font-medium text-gray-400 mb-1">
-                Price per Carton (ex-VAT)
-              </p>
-              {product.isOnSale && product.originalCartonPrice ? (
-                <p className="text-sm text-gray-400 line-through mb-0.5">
-                  EGP {formatPrice(product.originalCartonPrice)}
+            {authLoading ? (
+              <div className="rounded-xl p-5 mb-4 border bg-[#F7F7F5] border-gray-100 h-28 animate-pulse" />
+            ) : !isLoggedIn ? (
+              <div className="rounded-xl p-5 mb-4 border bg-[#F7F7F5] border-gray-100">
+                <p className="text-xs font-medium text-gray-400 mb-2 flex items-center gap-1">
+                  <Lock size={11} /> Price per Carton (ex-VAT)
                 </p>
-              ) : null}
-              <p className={`text-3xl font-bold ${product.isOnSale ? "text-red-600" : "text-[#1B4D2E]"}`}>
-                EGP {formatPrice(product.pricePerCarton)}
-              </p>
-              <p className="text-xs text-gray-400 mt-2">
-                Unit price: EGP {formatPrice(product.pricePerPiece)} / pc
-              </p>
-            </div>
+                <p className="text-lg font-semibold text-gray-500">Login to see price</p>
+                <p className="text-xs text-gray-400 mt-2">
+                  Pricing is available to registered HORECA accounts.
+                </p>
+              </div>
+            ) : (
+              <div className={`rounded-xl p-5 mb-4 border ${product.isOnSale ? "bg-red-50 border-red-200" : "bg-[#F7F7F5] border-gray-100"}`}>
+                <p className="text-xs font-medium text-gray-400 mb-1">
+                  Price per Carton (ex-VAT)
+                </p>
+                {product.isOnSale && product.originalCartonPrice ? (
+                  <p className="text-sm text-gray-400 line-through mb-0.5">
+                    EGP {formatPrice(product.originalCartonPrice)}
+                  </p>
+                ) : null}
+                <p className={`text-3xl font-bold ${product.isOnSale ? "text-red-600" : "text-[#1B4D2E]"}`}>
+                  EGP {formatPrice(product.pricePerCarton)}
+                </p>
+                <p className="text-xs text-gray-400 mt-2">
+                  Unit price: EGP {formatPrice(product.pricePerPiece)} / pc
+                </p>
+              </div>
+            )}
 
             <div className="flex items-center gap-3 bg-[#E8F5E9] border border-green-200 rounded-xl px-4 py-3 mb-4">
               <span className="text-lg">📦</span>
@@ -207,71 +222,85 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               </p>
             </div>
 
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex flex-col items-center">
-                <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => setQty(Math.max(1, qty - 1))}
-                    className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors"
-                  >
-                    −
-                  </button>
+            {authLoading ? (
+              <div className="h-14 bg-gray-100 rounded-lg animate-pulse mb-8" />
+            ) : !isLoggedIn ? (
+              <Link
+                href="/account/login"
+                className="flex items-center justify-center gap-2 bg-[#1B4D2E] text-white font-semibold py-3 rounded-lg hover:bg-[#163d24] transition-colors text-sm mb-8"
+              >
+                <Lock size={16} />
+                Login to Order
+              </Link>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex flex-col items-center">
+                    <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => setQty(Math.max(1, qty - 1))}
+                        className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors"
+                      >
+                        −
+                      </button>
 
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={qtyInput}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (/^\d*$/.test(v)) setQtyInput(v);
-                    }}
-                    onBlur={() => {
-                      const n = parseInt(qtyInput, 10);
-                      if (!qtyInput.trim() || isNaN(n) || n < 1) {
-                        setQtyInput(String(qty));
-                        return;
-                      }
-                      setQty(n);
-                      setQtyInput(String(n));
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                    }}
-                    className="px-4 py-2.5 text-sm font-semibold border-x border-gray-200 min-w-[3rem] w-16 text-center focus:outline-none focus:bg-gray-50"
-                  />
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={qtyInput}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (/^\d*$/.test(v)) setQtyInput(v);
+                        }}
+                        onBlur={() => {
+                          const n = parseInt(qtyInput, 10);
+                          if (!qtyInput.trim() || isNaN(n) || n < 1) {
+                            setQtyInput(String(qty));
+                            return;
+                          }
+                          setQty(n);
+                          setQtyInput(String(n));
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                        }}
+                        className="px-4 py-2.5 text-sm font-semibold border-x border-gray-200 min-w-[3rem] w-16 text-center focus:outline-none focus:bg-gray-50"
+                      />
+
+                      <button
+                        onClick={() => setQty(qty + 1)}
+                        className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-gray-400 mt-1">
+                      {qty === 1 ? "1 carton" : `${qty} cartons`} = {qty * product.caseCount} pcs
+                    </p>
+                  </div>
 
                   <button
-                    onClick={() => setQty(qty + 1)}
-                    className="px-4 py-2.5 text-base font-semibold hover:bg-gray-50 transition-colors"
+                    onClick={handleAdd}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                      added
+                        ? "bg-[#1B4D2E] text-white"
+                        : "bg-[#111111] text-white hover:bg-[#1B4D2E]"
+                    }`}
                   >
-                    +
+                    {added ? <Check size={16} /> : <ShoppingCart size={16} />}
+                    {added ? "Added to Cart!" : "Add to Cart"}
                   </button>
                 </div>
 
-                <p className="text-xs text-gray-400 mt-1">
-                  {qty === 1 ? "1 carton" : `${qty} cartons`} = {qty * product.caseCount} pcs
-                </p>
-              </div>
-
-              <button
-                onClick={handleAdd}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                  added
-                    ? "bg-[#1B4D2E] text-white"
-                    : "bg-[#111111] text-white hover:bg-[#1B4D2E]"
-                }`}
-              >
-                {added ? <Check size={16} /> : <ShoppingCart size={16} />}
-                {added ? "Added to Cart!" : "Add to Cart"}
-              </button>
-            </div>
-
-            <Link
-              href="/checkout"
-              className="text-center border border-gray-200 rounded-lg py-3 font-medium text-sm hover:border-[#1B4D2E] hover:text-[#1B4D2E] transition-colors mb-8"
-            >
-              Proceed to Checkout
-            </Link>
+                <Link
+                  href="/checkout"
+                  className="text-center border border-gray-200 rounded-lg py-3 font-medium text-sm hover:border-[#1B4D2E] hover:text-[#1B4D2E] transition-colors mb-8"
+                >
+                  Proceed to Checkout
+                </Link>
+              </>
+            )}
 
             <div className="grid grid-cols-3 gap-3 pt-5 border-t border-gray-100">
               {[

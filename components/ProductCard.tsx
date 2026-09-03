@@ -2,9 +2,10 @@
 "use client";
 import Link from "next/link";
 import { useCart, CartProduct } from "@/lib/cartStore";
-import { Check, Minus, Plus, ShoppingCart } from "lucide-react";
+import { Check, Lock, Minus, Plus, ShoppingCart } from "lucide-react";
 import ProductImage from "./ProductImage";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 interface Props {
   product: CartProduct;
@@ -49,6 +50,8 @@ function QtyInput({ quantity, onChange }: { quantity: number; onChange: (q: numb
 
 export default function ProductCard({ product }: Props) {
   const { items, add, update, remove } = useCart();
+  const { user, loading: authLoading } = useAuth();
+  const isLoggedIn = !!user;
   const [justAdded, setJustAdded] = useState(false);
 
   const cartItem = items.find((i) => i.product.id === product.id);
@@ -117,57 +120,82 @@ export default function ProductCard({ product }: Props) {
           {product.caseCount} pcs / carton
         </span>
 
-        <div className="mt-auto pt-4 flex items-center justify-between gap-2">
-          <div>
-            <p className="text-xs text-gray-400">Per Carton</p>
-            {product.isOnSale && product.originalCartonPrice ? (
-              <p className="text-xs text-gray-400 line-through leading-none mb-0.5">
-                EGP {formatPrice(product.originalCartonPrice)}
-              </p>
-            ) : null}
-            <span className={`text-base font-bold ${product.isOnSale ? "text-red-600" : "text-[#1B4D2E]"}`}>
-              EGP {formatPrice(product.pricePerCarton)}
-            </span>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Min. 1 carton · الحد الأدنى كرتونة
-            </p>
+        {authLoading ? (
+          <div className="mt-auto pt-4 flex items-center justify-between gap-2">
+            <div className="h-8 w-20 bg-gray-100 rounded animate-pulse" />
+            <div className="h-8 w-16 bg-gray-100 rounded animate-pulse" />
           </div>
-
-          {qty > 0 ? (
-            <div
-              className="flex items-center border border-[#1B4D2E] rounded-lg overflow-hidden"
-              onClick={(e) => e.preventDefault()}
-            >
-              <button
-                onClick={handleDec}
-                className="px-2 py-1.5 text-[#1B4D2E] hover:bg-[#1B4D2E] hover:text-white transition-colors"
-              >
-                <Minus size={12} />
-              </button>
-
-              <QtyInput quantity={qty} onChange={(q) => update(product.id, q)} />
-
-              <button
-                onClick={handleInc}
-                className="px-2 py-1.5 text-[#1B4D2E] hover:bg-[#1B4D2E] hover:text-white transition-colors"
-              >
-                <Plus size={12} />
-              </button>
+        ) : !isLoggedIn ? (
+          <div className="mt-auto pt-4 flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs text-gray-400 flex items-center gap-1">
+                <Lock size={10} /> Price hidden
+              </p>
+              <p className="text-sm font-semibold text-gray-500">Login to see price</p>
             </div>
-          ) : (
-            <button
-              onClick={handleAdd}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                justAdded
-                  ? "bg-[#1B4D2E] text-white"
-                  : "bg-[#111111] text-white hover:bg-[#1B4D2E]"
-              }`}
+
+            <Link
+              href="/account/login"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-[#1B4D2E] text-white hover:bg-[#163d24] transition-colors"
             >
-              {justAdded ? <Check size={13} /> : <ShoppingCart size={13} />}
-              {justAdded ? "Added ✓" : "Add"}
-            </button>
-          )}
-        </div>
+              <Lock size={12} />
+              Login to Order
+            </Link>
+          </div>
+        ) : (
+          <div className="mt-auto pt-4 flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs text-gray-400">Per Carton</p>
+              {product.isOnSale && product.originalCartonPrice ? (
+                <p className="text-xs text-gray-400 line-through leading-none mb-0.5">
+                  EGP {formatPrice(product.originalCartonPrice)}
+                </p>
+              ) : null}
+              <span className={`text-base font-bold ${product.isOnSale ? "text-red-600" : "text-[#1B4D2E]"}`}>
+                EGP {formatPrice(product.pricePerCarton)}
+              </span>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Min. 1 carton · الحد الأدنى كرتونة
+              </p>
+            </div>
+
+            {qty > 0 ? (
+              <div
+                className="flex items-center border border-[#1B4D2E] rounded-lg overflow-hidden"
+                onClick={(e) => e.preventDefault()}
+              >
+                <button
+                  onClick={handleDec}
+                  className="px-2 py-1.5 text-[#1B4D2E] hover:bg-[#1B4D2E] hover:text-white transition-colors"
+                >
+                  <Minus size={12} />
+                </button>
+
+                <QtyInput quantity={qty} onChange={(q) => update(product.id, q)} />
+
+                <button
+                  onClick={handleInc}
+                  className="px-2 py-1.5 text-[#1B4D2E] hover:bg-[#1B4D2E] hover:text-white transition-colors"
+                >
+                  <Plus size={12} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleAdd}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  justAdded
+                    ? "bg-[#1B4D2E] text-white"
+                    : "bg-[#111111] text-white hover:bg-[#1B4D2E]"
+                }`}
+              >
+                {justAdded ? <Check size={13} /> : <ShoppingCart size={13} />}
+                {justAdded ? "Added ✓" : "Add"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </Link>
   );
