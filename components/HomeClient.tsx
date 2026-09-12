@@ -250,6 +250,22 @@ const GLASS_BRANDS = [
   { dot: "#004B93", name: "Pepsi",     count: 62 },
 ];
 
+// ── Customer logo wall — a few of our biggest HORECA accounts ─────────────────
+const CUSTOMER_LOGOS = [
+  { name: "Four Seasons",   logo: "/customer-logos/fourseasons.png" },
+  { name: "Marriott",       logo: "/customer-logos/marriott.png" },
+  { name: "Americana",      logo: "/customer-logos/americana.png" },
+  { name: "Travco Group",   logo: "/customer-logos/travco.png" },
+  { name: "Babel Lebanese Cuisine", logo: "/customer-logos/babel.png" },
+  { name: "Sizzler Steak House",    logo: "/customer-logos/sizzler.png" },
+  { name: "Baky Hospitality", logo: "/customer-logos/baky.png" },
+  { name: "GiGi",           logo: "/customer-logos/gigi.png" },
+  { name: "Breadfast",      logo: "/customer-logos/breadfast.png" },
+  { name: "MO Bistro",      logo: "/customer-logos/mobistro.png" },
+  { name: "Al Diwan",       logo: "/customer-logos/aldiwan.jpg" },
+  { name: "Qasr Elkbabgi",  logo: "/customer-logos/qasr.jpg" },
+];
+
 type Product = ReturnType<typeof toProduct>;
 
 // ── Props passed down from the server component ───────────────────────────────
@@ -619,6 +635,43 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── OUR CUSTOMERS ────────────────────────────────────────────────── */}
+      <section className="bg-white border-t border-gray-100 py-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <span className="inline-block text-[#1B4D2E] text-xs font-bold uppercase tracking-widest mb-2">
+              Our Customers
+            </span>
+            <h2 className="text-3xl font-bold text-[#111111]">Trusted by Leading HORECA Brands</h2>
+            <p className="text-gray-400 text-sm mt-1" dir="rtl">من عملائنا الموثوقين</p>
+            <p className="text-gray-500 text-sm mt-3 max-w-xl mx-auto">
+              A few of the hotel groups, restaurant chains, and hospitality brands across Egypt who stock through Mass Distribution.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+            {CUSTOMER_LOGOS.map((c) => (
+              <div
+                key={c.name}
+                className="group bg-white border border-gray-200 rounded-2xl aspect-[3/2] flex items-center justify-center p-6 hover:border-[#1B4D2E] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={c.logo}
+                  alt={c.name}
+                  className="max-h-full max-w-full object-contain"
+                  loading="lazy"
+                />
+              </div>
+            ))}
+            <div className="bg-[#F7F7F5] border border-dashed border-gray-300 rounded-2xl aspect-[3/2] flex flex-col items-center justify-center gap-0.5 hover:border-[#1B4D2E] transition-colors">
+              <span className="text-[#1B4D2E] font-extrabold text-sm">+ Many</span>
+              <span className="text-gray-400 text-[10px] uppercase tracking-wider">More Partners</span>
+            </div>
           </div>
         </div>
       </section>
