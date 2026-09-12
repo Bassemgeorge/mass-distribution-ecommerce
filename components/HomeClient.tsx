@@ -32,27 +32,27 @@ function useCountdown(target: Date) {
 function PromoBanner() {
   const [slide, setSlide] = useState(0);
   const { days, hours, mins } = useCountdown(SALE_END);
-
-  useEffect(() => {
-    const id = setInterval(() => setSlide((s) => (s + 1) % 2), 5000);
-    return () => clearInterval(id);
-  }, []);
+  const saleActive = Date.now() < SALE_END.getTime();
 
   const slides = [
-    {
-      gradient: "from-[#7a0f14] via-[#c8202c] to-[#E63946]",
-      accent: "text-[#E63946]",
-      badge: "Limited Time",
-      watermark: "%",
-      headline: "10% Off Wadi Food",
-      headlineAr: "خصم ١٠٪ على وادي فوود",
-      sub: "Olive oil, olives & pickles — while stock lasts",
-      countdown: `Ends in ${days}d ${hours}h ${mins}m`,
-      cta: "Shop the Sale",
-      href: "/products?brand=Wadifood",
-      image: "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/product-images/wadifood/6223000190418.png",
-      imageAlt: "Wadi Food Extra Virgin Olive Oil",
-    },
+    ...(saleActive
+      ? [
+          {
+            gradient: "from-[#7a0f14] via-[#c8202c] to-[#E63946]",
+            accent: "text-[#E63946]",
+            badge: "Limited Time",
+            watermark: "%",
+            headline: "10% Off Wadi Food",
+            headlineAr: "خصم ١٠٪ على وادي فوود",
+            sub: "Olive oil, olives & pickles — while stock lasts",
+            countdown: `Ends in ${days}d ${hours}h ${mins}m`,
+            cta: "Shop the Sale",
+            href: "/products?brand=Wadifood",
+            image: "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/product-images/wadifood/6223000190418.png",
+            imageAlt: "Wadi Food Extra Virgin Olive Oil",
+          },
+        ]
+      : []),
     {
       gradient: "from-[#081c10] via-[#153d24] to-[#1B4D2E]",
       accent: "text-[#1B4D2E]",
@@ -69,16 +69,24 @@ function PromoBanner() {
     },
   ];
 
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const id = setInterval(() => setSlide((s) => (s + 1) % slides.length), 5000);
+    return () => clearInterval(id);
+  }, [slides.length]);
+
+  const activeSlide = slide % slides.length;
+
   return (
     <section className="relative overflow-hidden" style={{ minHeight: 260 }}>
       {slides.map((s, i) => (
         <a
           key={s.href}
           href={s.href}
-          aria-hidden={i !== slide}
-          tabIndex={i === slide ? 0 : -1}
+          aria-hidden={i !== activeSlide}
+          tabIndex={i === activeSlide ? 0 : -1}
           className={`group block bg-gradient-to-br ${s.gradient} transition-opacity duration-700 ${
-            i === slide ? "relative opacity-100" : "absolute inset-0 opacity-0 pointer-events-none"
+            i === activeSlide ? "relative opacity-100" : "absolute inset-0 opacity-0 pointer-events-none"
           }`}
         >
           {/* Giant translucent watermark */}
@@ -131,16 +139,18 @@ function PromoBanner() {
         </a>
       ))}
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-        {slides.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setSlide(i)}
-            aria-label={`Show promo ${i + 1}`}
-            className={`h-1.5 rounded-full transition-all ${i === slide ? "w-6 bg-white" : "w-1.5 bg-white/40"}`}
-          />
-        ))}
-      </div>
+      {slides.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {slides.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setSlide(i)}
+              aria-label={`Show promo ${i + 1}`}
+              className={`h-1.5 rounded-full transition-all ${i === activeSlide ? "w-6 bg-white" : "w-1.5 bg-white/40"}`}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
