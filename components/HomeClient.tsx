@@ -262,7 +262,7 @@ const CUSTOMER_LOGOS = [
   { name: "GiGi",           logo: "/customer-logos/gigi.png" },
   { name: "Breadfast",      logo: "/customer-logos/breadfast.png" },
   { name: "MO Bistro",      logo: "/customer-logos/mobistro.png" },
-  { name: "Al Diwan",       logo: "/customer-logos/aldiwan.jpg" },
+  { name: "Al Dahan",       logo: "/customer-logos/aldahan.jpg" },
   { name: "Qasr Elkbabgi",  logo: "/customer-logos/qasr.jpg" },
 ];
 
