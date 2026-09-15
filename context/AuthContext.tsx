@@ -2,7 +2,14 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
-import { signUp as authSignUp, signIn as authSignIn, signOut as authSignOut, SignUpData } from "@/lib/auth";
+import {
+  signUp as authSignUp,
+  signIn as authSignIn,
+  signOut as authSignOut,
+  resetPasswordForEmail as authResetPasswordForEmail,
+  updatePassword as authUpdatePassword,
+  SignUpData,
+} from "@/lib/auth";
 import type { User, Session } from "@supabase/supabase-js";
 
 export interface CustomerProfile {
@@ -23,6 +30,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   signUp: (data: SignUpData) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
   refreshCustomer: () => Promise<void>;
 }
 
@@ -96,8 +105,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
   }
 
+  async function resetPassword(email: string) {
+    return authResetPasswordForEmail(email);
+  }
+
+  async function updatePassword(newPassword: string) {
+    return authUpdatePassword(newPassword);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, session, customer, loading, signIn, signOut, signUp, refreshCustomer }}>
+    <AuthContext.Provider value={{ user, session, customer, loading, signIn, signOut, signUp, resetPassword, updatePassword, refreshCustomer }}>
       {children}
     </AuthContext.Provider>
   );
