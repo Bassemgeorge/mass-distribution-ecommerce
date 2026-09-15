@@ -4,6 +4,7 @@ import { CartProvider } from "@/lib/cartStore";
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Mass Distribution — HORECA Supplies Egypt",
@@ -29,6 +30,7 @@ export default function RootLayout({
             <Footer />
           </CartProvider>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );
