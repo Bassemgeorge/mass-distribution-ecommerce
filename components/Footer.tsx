@@ -95,7 +95,7 @@ export default function Footer() {
                 Mobile: <a href="tel:+201288895916" className="hover:text-white transition-colors">+20 1288895916</a>
               </li>
               <li className="text-white/60">
-                Email: <a href="mailto:info@massdistribution.com" className="hover:text-white transition-colors">info@massdistribution.com</a>
+                Email: <a href="mailto:info@mass-dis.com" className="hover:text-white transition-colors">info@mass-dis.com</a>
               </li>
               <li className="text-white/60">Address: Cairo, Egypt</li>
               <li>

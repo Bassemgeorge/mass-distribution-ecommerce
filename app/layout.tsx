@@ -9,7 +9,7 @@ import { Analytics } from "@vercel/analytics/next";
 export const metadata: Metadata = {
   title: "Mass Distribution — HORECA Supplies Egypt",
   description:
-    "B2B FMCG distribution for hotels, restaurants, and cafés across Egypt. 225 products from top brands.",
+    "B2B FMCG distribution for hotels, restaurants, and cafés across Egypt. 275 products from top brands.",
   keywords: "HORECA, Egypt, distribution, FMCG, wholesale, Mass Distribution",
   icons: {
     icon: "/logo-color.png.png",

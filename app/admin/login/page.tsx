@@ -171,7 +171,7 @@ export default function AdminLoginPage() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className={inputClass}
-                placeholder="admin@massdistribution.com"
+                placeholder="admin@mass-dis.com"
                 autoComplete="email"
                 autoCapitalize="none"
                 spellCheck={false}

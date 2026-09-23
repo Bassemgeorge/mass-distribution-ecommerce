@@ -345,7 +345,7 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
 
           <p className="text-white/85 text-base leading-relaxed mb-8 max-w-md">
             Order premium F&amp;B supplies by carton.<br />
-            223+ products from 13 top brands.<br />
+            275+ products from 13 top brands.<br />
             Delivered across Cairo &amp; Giza in 24–48 hours.
           </p>
 
