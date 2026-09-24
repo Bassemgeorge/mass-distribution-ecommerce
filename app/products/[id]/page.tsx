@@ -157,11 +157,15 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
                 {product.category}
               </span>
-              {product.isOnSale && (
+              {product.isSoldOut ? (
+                <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                  Sold out
+                </span>
+              ) : product.isOnSale ? (
                 <span className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
                   Sale
                 </span>
-              )}
+              ) : null}
             </div>
 
             <h1 className="text-2xl font-bold text-[#111111] leading-tight mb-1">
@@ -232,6 +236,13 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 <Lock size={16} />
                 Login to Order
               </Link>
+            ) : product.isSoldOut ? (
+              <button
+                disabled
+                className="w-full bg-gray-200 text-gray-400 font-semibold py-3 rounded-lg cursor-not-allowed text-sm mb-8"
+              >
+                Sold out
+              </button>
             ) : (
               <>
                 <div className="flex items-center gap-3 mb-3">

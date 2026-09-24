@@ -53,6 +53,8 @@ export function toProduct(p: DbProduct) {
     image: p.image_url ?? "/placeholder-product.svg",
     isOnSale: p.is_on_sale ?? false,
     originalCartonPrice: p.original_carton_price ?? null,
+    // null means "unknown / not tracked"; treat as in-stock
+    isSoldOut: p.stock !== null && p.stock <= 0,
   };
 }
 

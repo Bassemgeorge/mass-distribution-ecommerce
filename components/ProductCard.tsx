@@ -52,6 +52,7 @@ export default function ProductCard({ product }: Props) {
   const { items, add, update, remove } = useCart();
   const { user, loading: authLoading } = useAuth();
   const isLoggedIn = !!user;
+  const isSoldOut = !!product.isSoldOut;
   const [justAdded, setJustAdded] = useState(false);
 
   const cartItem = items.find((i) => i.product.id === product.id);
@@ -90,16 +91,20 @@ export default function ProductCard({ product }: Props) {
           product={product}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          className="object-contain p-6 group-hover:scale-105 transition-transform duration-300"
+          className={`object-contain p-6 group-hover:scale-105 transition-transform duration-300${isSoldOut ? " opacity-40" : ""}`}
         />
         <span className="absolute top-3 left-3 bg-[#1B4D2E] text-white text-xs font-medium px-2.5 py-1 rounded-full">
           {product.brand}
         </span>
-        {product.isOnSale && (
+        {isSoldOut ? (
+          <span className="absolute top-3 right-3 bg-gray-400 text-white text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
+            Sold out
+          </span>
+        ) : product.isOnSale ? (
           <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
             Sale
           </span>
-        )}
+        ) : null}
       </div>
 
       {/* Content */}
@@ -160,7 +165,15 @@ export default function ProductCard({ product }: Props) {
               </p>
             </div>
 
-            {qty > 0 ? (
+            {isSoldOut ? (
+              <button
+                disabled
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-gray-200 text-gray-400 cursor-not-allowed"
+                onClick={(e) => e.preventDefault()}
+              >
+                Sold out
+              </button>
+            ) : qty > 0 ? (
               <div
                 className="flex items-center border border-[#1B4D2E] rounded-lg overflow-hidden"
                 onClick={(e) => e.preventDefault()}

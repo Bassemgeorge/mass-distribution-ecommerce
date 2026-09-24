@@ -18,6 +18,7 @@ export interface CartProduct {
   image: string;
   isOnSale?: boolean;
   originalCartonPrice?: number | null;
+  isSoldOut?: boolean;
 }
 
 export interface CartItem {
@@ -38,6 +39,8 @@ type CartAction =
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "ADD": {
+      // Safety net: never add a product that is marked sold out
+      if (action.product.isSoldOut) return state;
       const existing = state.items.find((i) => i.product.id === action.product.id);
       if (existing) {
         return {
