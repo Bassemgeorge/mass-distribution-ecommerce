@@ -165,30 +165,17 @@ useEffect(() => {
 
     // 4 — if Paymob, create payment intention and redirect
     if (form.paymentMethod === "paymob") {
-      // DB trigger populates total_incl_vat after items are inserted — read it back
-      const { data: orderWithVat } = await supabase
-        .from("orders")
-        .select("total_incl_vat")
-        .eq("id", order.id)
-        .single();
-      const paymobTotal = orderWithVat?.total_incl_vat ?? totalInclVat;
+      // Amount is computed server-side from the DB — only send orderId + auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
 
       const response = await fetch("/api/paymob/create-intention", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
-        body: JSON.stringify({
-          orderId: order.id,
-          total: paymobTotal,
-          items,
-          customer: {
-            name: form.contactName,
-            phone: form.phone,
-            address: `${form.address}, ${form.area}`,
-            city: form.area,
-          },
-        }),
+        body: JSON.stringify({ orderId: order.id }),
       });
 
       const data = await response.json();
@@ -312,7 +299,7 @@ useEffect(() => {
               <div className="space-y-2">
                 {[
                   { value: "cash", label: "Cash on Delivery", desc: "Pay in cash when your order arrives." },
-                 { value: "paymob", label: "Pay Online", desc: "Pay securely online by card through Paymob." },
+                 { value: "paymob", label: "Pay Online — Card, Mobile Wallet or Apple Pay", desc: "Secure payment by Paymob. Visa, Mastercard, Meeza, Vodafone Cash & other wallets, Apple Pay." },
                     ].map(({ value, label, desc }) => (
                   <label key={value} className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${form.paymentMethod === value ? "border-[#1B4D2E] bg-[#1B4D2E]/5" : "border-gray-200 hover:border-gray-300"}`}>
                     <input
@@ -326,6 +313,11 @@ useEffect(() => {
                     <div>
                       <p className="text-sm font-semibold text-[#111111]">{label}</p>
                       <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                      {value === "paymob" && form.paymentMethod === "paymob" && (
+                        <p className="text-xs font-semibold text-[#1B4D2E] mt-1">
+                          You&apos;ll pay EGP {totalInclVat.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        </p>
+                      )}
                     </div>
                   </label>
                 ))}

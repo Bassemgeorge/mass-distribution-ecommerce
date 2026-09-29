@@ -18,6 +18,7 @@ const PAYMENT_COLORS: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",
   paid: "bg-green-50 text-[#1B4D2E] border-green-200",
   failed: "bg-red-50 text-red-700 border-red-200",
+  amount_mismatch: "bg-orange-50 text-orange-700 border-orange-200",
 };
 
 const FILTERS = [
@@ -29,6 +30,8 @@ const FILTERS = [
   "cancelled",
   "paid",
   "unpaid",
+  "failed",
+  "amount_mismatch",
   "payment_failed",
 ];
 
@@ -169,10 +172,11 @@ export default function AdminOrdersPage() {
     setML(false);
   }
 
+  const paymentStatusFilters = new Set(["paid", "unpaid", "failed", "amount_mismatch"]);
   const filtered =
     filter === "All"
       ? orders
-      : filter === "paid" || filter === "unpaid"
+      : paymentStatusFilters.has(filter)
         ? orders.filter((o) => (o.payment_status ?? "unpaid") === filter)
         : filter === "payment_failed"
           ? orders.filter((o) => o.status === "payment_failed" || o.payment_status === "failed")
@@ -207,7 +211,7 @@ export default function AdminOrdersPage() {
           const count =
             f === "All"
               ? orders.length
-              : f === "paid" || f === "unpaid"
+              : paymentStatusFilters.has(f)
                 ? orders.filter((o) => (o.payment_status ?? "unpaid") === f).length
                 : f === "payment_failed"
                   ? orders.filter((o) => o.status === "payment_failed" || o.payment_status === "failed").length

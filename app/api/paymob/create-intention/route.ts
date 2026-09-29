@@ -1,60 +1,123 @@
-// here we take with server just 
-
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-type CheckoutItem = {
-  product: {
-    id: string;
-    nameEn: string;
-    pricePerCarton: number;
-  };
-  quantity: number;
-};
+const PAYMOB_BASE = "https://accept.paymob.com";
 
-type RequestBody = {
-  orderId: string;
-  total: number;
-  items: CheckoutItem[];
-  customer: {
-    name: string;
-    email?: string;
-    phone: string;
-    address: string;
-    city?: string;
-  };
-};
-
-const PAYMOB_BASE_URL = "https://accept.paymob.com";
+function createSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Missing Supabase server environment variables.");
+  return createClient(url, key, { auth: { persistSession: false } });
+}
 
 export async function POST(request: Request) {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
   try {
+    // ── Env checks ────────────────────────────────────────────────────────────
     const secretKey = process.env.PAYMOB_SECRET_KEY;
     const publicKey = process.env.PAYMOB_PUBLIC_KEY;
-    const cardIntegrationId = process.env.PAYMOB_CARD_INTEGRATION_ID;
-
-    if (!secretKey || !publicKey || !cardIntegrationId) {
-      return NextResponse.json(
-        { error: "Missing Paymob environment variables." },
-        { status: 500 }
-      );
+    if (!secretKey || !publicKey) {
+      return NextResponse.json({ error: "Payment service not configured." }, { status: 500 });
     }
 
-    const body = (await request.json()) as RequestBody;
+    // ── Parse body — accept orderId only; amount comes from the DB ────────────
+    const body = await request.json() as { orderId?: string };
+    if (!body.orderId) {
+      return NextResponse.json({ error: "Missing orderId." }, { status: 400 });
+    }
+    const orderId = body.orderId;
 
-    if (!body.orderId || !body.total || !body.customer?.name || !body.customer?.phone) {
-      return NextResponse.json(
-        { error: "Missing required checkout data." },
-        { status: 400 }
-      );
+    // ── Auth check — caller must own this order ───────────────────────────────
+    const authHeader = request.headers.get("authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+    const supabase = createSupabaseAdmin();
+
+    if (token) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) {
+        // Verify the order's customer belongs to this user
+        const { data: customer } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!customer) {
+          return NextResponse.json({ error: "Order not found for this account." }, { status: 403 });
+        }
+
+        const { data: ownership } = await supabase
+          .from("orders")
+          .select("id")
+          .eq("id", orderId)
+          .eq("customer_id", customer.id)
+          .single();
+
+        if (!ownership) {
+          return NextResponse.json({ error: "Order not found for this account." }, { status: 403 });
+        }
+      }
     }
 
-    const [firstName, ...restName] = body.customer.name.trim().split(" ");
-    const lastName = restName.join(" ") || firstName || "Customer";
+    // ── Load order from DB — never trust the browser's amount ─────────────────
+    const { data: order, error: orderErr } = await supabase
+      .from("orders")
+      .select(`
+        id, customer_id, total, total_incl_vat, payment_method, payment_status, status,
+        order_items ( product_name, quantity, unit_price, subtotal, vat_amount ),
+        customers ( name, email, phone, address, business_name )
+      `)
+      .eq("id", orderId)
+      .single();
 
-    const amountCents = Math.round(body.total * 100);
+    if (orderErr || !order) {
+      return NextResponse.json({ error: "Order not found." }, { status: 404 });
+    }
 
-    const paymobResponse = await fetch(`${PAYMOB_BASE_URL}/v1/intention/`, {
+    // ── Validate payment state ─────────────────────────────────────────────────
+    if (order.payment_method !== "paymob") {
+      return NextResponse.json({ error: "Order is not set to Paymob payment." }, { status: 400 });
+    }
+    if (!["pending", "failed"].includes(order.payment_status ?? "")) {
+      return NextResponse.json({ error: "Order cannot be paid in its current state." }, { status: 400 });
+    }
+
+    // ── Compute amount server-side ─────────────────────────────────────────────
+    type OrderItem = { vat_amount: number | null; product_name: string; quantity: number; unit_price: number; subtotal: number };
+    const items = (order.order_items ?? []) as OrderItem[];
+    const vatSum = items.reduce((s, i) => s + (i.vat_amount ?? 0), 0);
+    const amount: number = order.total_incl_vat ?? (order.total + vatSum);
+    const amountCents = Math.round(amount * 100);
+
+    // ── Build payment methods array from env ───────────────────────────────────
+    const paymentMethods: number[] = [];
+    if (process.env.PAYMOB_CARD_INTEGRATION_ID)
+      paymentMethods.push(Number(process.env.PAYMOB_CARD_INTEGRATION_ID));
+    if (process.env.PAYMOB_WALLET_INTEGRATION_ID)
+      paymentMethods.push(Number(process.env.PAYMOB_WALLET_INTEGRATION_ID));
+    if (process.env.PAYMOB_APPLE_PAY_INTEGRATION_ID)
+      paymentMethods.push(Number(process.env.PAYMOB_APPLE_PAY_INTEGRATION_ID));
+    if (paymentMethods.length === 0) {
+      return NextResponse.json({ error: "No payment integrations configured." }, { status: 500 });
+    }
+
+    // ── Customer details ───────────────────────────────────────────────────────
+    type Customer = { name: string; email: string | null; phone: string; address: string; business_name: string } | null;
+    const customer = order.customers as unknown as Customer;
+    const fullName = customer?.name ?? "Customer";
+    const [firstName, ...rest] = fullName.trim().split(" ");
+    const lastName = rest.join(" ") || firstName;
+    const phone = customer?.phone ?? "";
+    const email = customer?.email || "info@mass-dis.com";
+    const address = customer?.address ?? "Cairo, Egypt";
+    const ref = orderId.slice(0, 8).toUpperCase();
+
+    // ── Call Paymob ────────────────────────────────────────────────────────────
+    const specialReference = `mass-${orderId}-${Date.now()}`;
+
+    const paymobRes = await fetch(`${PAYMOB_BASE}/v1/intention/`, {
       method: "POST",
       headers: {
         Authorization: `Token ${secretKey}`,
@@ -63,77 +126,70 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         amount: amountCents,
         currency: "EGP",
-        payment_methods: [Number(cardIntegrationId)],
+        payment_methods: paymentMethods,
+        // Single line item matching total — avoids per-item rounding issues
         items: [
-  {
-    name: `Mass Distribution Order ${body.orderId}`,
-    amount: amountCents,
-    description: `Order ${body.orderId}`,
-    quantity: 1,
-  },
-],
+          {
+            name: `Mass Distribution order #${ref}`,
+            amount: amountCents,
+            description: `Order ${ref}`,
+            quantity: 1,
+          },
+        ],
         billing_data: {
           first_name: firstName || "Customer",
           last_name: lastName,
-          email: body.customer.email || "customer@example.com",
-          phone_number: body.customer.phone,
-          street: body.customer.address || "NA",
-          city: body.customer.city || "Cairo",
+          email,
+          phone_number: phone || "NA",
+          street: address,
+          city: "Cairo",
           country: "EG",
-          state: body.customer.city || "Cairo",
+          state: "Cairo",
           postal_code: "00000",
         },
         customer: {
           first_name: firstName || "Customer",
           last_name: lastName,
-          email: body.customer.email || "customer@example.com",
+          email,
         },
-        extras: {
-          supabase_order_id: body.orderId,
-        },
-        special_reference: `mass-${body.orderId}`,
-        redirection_url: `${siteUrl}/payment/success?orderId=${body.orderId}`,
+        extras: { supabase_order_id: orderId },
+        special_reference: specialReference,
+        redirection_url: `${siteUrl}/payment/result?orderId=${orderId}`,
         notification_url: `${siteUrl}/api/paymob/webhook`,
       }),
     });
 
-    const data = await paymobResponse.json();
+    const paymobData = await paymobRes.json();
 
-    if (!paymobResponse.ok) {
+    if (!paymobRes.ok) {
+      // Log details server-side only; never send to browser
+      console.error("[paymob] intention creation failed", paymobData);
       return NextResponse.json(
-        {
-          error: "Paymob intention creation failed.",
-          details: data,
-        },
-        { status: paymobResponse.status }
+        { error: "Payment service error. Please try again." },
+        { status: 502 }
       );
     }
 
-    const clientSecret = data.client_secret || data.cs;
-
+    const clientSecret: string | undefined = paymobData.client_secret ?? paymobData.cs;
     if (!clientSecret) {
-      return NextResponse.json(
-        {
-          error: "Paymob did not return a client secret.",
-          details: data,
-        },
-        { status: 500 }
-      );
+      console.error("[paymob] no client_secret in response", paymobData);
+      return NextResponse.json({ error: "Payment service error. Please try again." }, { status: 502 });
     }
 
-    const checkoutUrl = `${PAYMOB_BASE_URL}/unifiedcheckout/?publicKey=${publicKey}&clientSecret=${clientSecret}`;
+    // ── Save intention id (best-effort — column may not exist yet) ─────────────
+    if (paymobData.id) {
+      await supabase
+        .from("orders")
+        .update({ paymob_intention_id: String(paymobData.id) } as Record<string, unknown>)
+        .eq("id", orderId);
+    }
 
-    return NextResponse.json({
-      checkoutUrl,
-      clientSecret,
-      intention: data,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Unexpected server error.",
-      },
-      { status: 500 }
-    );
+    const checkoutUrl = `${PAYMOB_BASE}/unifiedcheckout/?publicKey=${publicKey}&clientSecret=${clientSecret}`;
+
+    return NextResponse.json({ checkoutUrl });
+
+  } catch (err) {
+    console.error("[paymob] create-intention error", err);
+    return NextResponse.json({ error: "Unexpected server error." }, { status: 500 });
   }
 }
