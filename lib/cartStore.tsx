@@ -19,6 +19,7 @@ export interface CartProduct {
   isOnSale?: boolean;
   originalCartonPrice?: number | null;
   isSoldOut?: boolean;
+  vatRate?: number;
 }
 
 export interface CartItem {
@@ -85,6 +86,8 @@ interface CartContextType {
   count: number;
   cartCount: number;
   cartTotal: number;
+  vatTotal: number;
+  totalInclVat: number;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -118,6 +121,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const total = state.items.reduce((sum, i) => sum + i.product.pricePerCarton * i.quantity, 0);
   const count = state.items.reduce((sum, i) => sum + i.quantity, 0);
+  const vatTotal = parseFloat(
+    state.items.reduce((sum, i) => sum + i.product.pricePerCarton * i.quantity * (i.product.vatRate ?? 0.14), 0).toFixed(2)
+  );
+  const totalInclVat = parseFloat((total + vatTotal).toFixed(2));
 
   return (
     <CartContext.Provider value={{
@@ -130,6 +137,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       count,
       cartCount: count,
       cartTotal: total,
+      vatTotal,
+      totalInclVat,
     }}>
       {children}
     </CartContext.Provider>

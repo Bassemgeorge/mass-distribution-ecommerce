@@ -43,7 +43,7 @@ function QtyInput({ quantity, onChange }: { quantity: number; onChange: (q: numb
 }
 
 export default function CartPage() {
-const { items, remove, update, total, count } = useCart();
+const { items, remove, update, total, count, vatTotal, totalInclVat } = useCart();
 const [notes, setNotes] = useState("");
 const MIN_ORDER_TOTAL = 10000;
 const belowMinimum = total < MIN_ORDER_TOTAL;
@@ -136,17 +136,20 @@ const belowMinimum = total < MIN_ORDER_TOTAL;
               <h2 className="text-base font-bold text-[#111111] mb-5">Order Summary</h2>
               <div className="space-y-2.5 text-sm mb-5">
                 <div className="flex justify-between text-gray-500">
-                  <span>Subtotal ({count} {count === 1 ? "carton" : "cartons"})</span>
+                  <span>Subtotal (excl. VAT) ({count} {count === 1 ? "carton" : "cartons"})</span>
                   <span className="font-semibold text-[#111111]">EGP {total.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-gray-500">
+                  <span>VAT</span>
+                  <span className="font-semibold text-[#111111]">EGP {vatTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-500">
                   <span>Shipping</span>
                   <span className="font-medium text-[#1B4D2E]">At checkout</span>
                 </div>
-                <p className="text-xs text-gray-400">Prices ex-VAT. Tax calculated at checkout.</p>
                 <div className="border-t border-gray-200 pt-2.5 flex justify-between font-bold text-sm">
-                  <span>Total (excl. VAT)</span>
-                  <span>EGP {total.toFixed(2)}</span>
+                  <span>Total (incl. VAT)</span>
+                  <span className="text-[#1B4D2E]">EGP {totalInclVat.toFixed(2)}</span>
                 </div>
               </div>
              

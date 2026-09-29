@@ -25,6 +25,11 @@ export interface DbProduct {
   stock: number;
   is_on_sale: boolean | null;
   original_carton_price: number | null;
+  vat_rate?: number | null;
+}
+
+export function formatEGP(n: number): string {
+  return "EGP " + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function extractNumber(value: string | null | undefined) {
@@ -49,7 +54,8 @@ export function toProduct(p: DbProduct) {
     caseCount,
     pricePerPiece: p.price,
     pricePerCarton: p.carton_price ?? p.price * caseCount,
-    hasTax: false,
+    vatRate: p.vat_rate == null ? 0.14 : Number(p.vat_rate),
+    hasTax: (p.vat_rate == null ? 0.14 : Number(p.vat_rate)) > 0,
     image: p.image_url ?? "/placeholder-product.svg",
     isOnSale: p.is_on_sale ?? false,
     originalCartonPrice: p.original_carton_price ?? null,

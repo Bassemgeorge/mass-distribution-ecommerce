@@ -29,7 +29,7 @@ const emptyForm: FormState = {
 };
 
 function CheckoutContent() {
-  const { items, total, count, clear } = useCart();
+  const { items, total, count, clear, vatTotal, totalInclVat } = useCart();
   const { user, customer } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -165,6 +165,14 @@ useEffect(() => {
 
     // 4 — if Paymob, create payment intention and redirect
     if (form.paymentMethod === "paymob") {
+      // DB trigger populates total_incl_vat after items are inserted — read it back
+      const { data: orderWithVat } = await supabase
+        .from("orders")
+        .select("total_incl_vat")
+        .eq("id", order.id)
+        .single();
+      const paymobTotal = orderWithVat?.total_incl_vat ?? totalInclVat;
+
       const response = await fetch("/api/paymob/create-intention", {
         method: "POST",
         headers: {
@@ -172,7 +180,7 @@ useEffect(() => {
         },
         body: JSON.stringify({
           orderId: order.id,
-          total,
+          total: paymobTotal,
           items,
           customer: {
             name: form.contactName,
@@ -352,6 +360,9 @@ useEffect(() => {
                     <span className="text-gray-600 truncate mr-3 leading-snug">
                       {product.nameEn}
                       <span className="text-gray-400"> × {quantity}</span>
+                      {(product.vatRate ?? 0.14) === 0 && (
+                        <span className="ml-1 bg-gray-100 text-gray-500 px-1 py-0.5 rounded text-[10px]">VAT exempt</span>
+                      )}
                     </span>
                     <span className="font-semibold flex-shrink-0">EGP {(product.pricePerCarton * quantity).toFixed(2)}</span>
                   </div>
@@ -359,21 +370,20 @@ useEffect(() => {
               </div>
               <div className="border-t border-gray-200 pt-3 space-y-2 text-sm">
                 <div className="flex justify-between text-gray-500">
-                  <span>Subtotal ({count} {count === 1 ? "carton" : "cartons"})</span>
+                  <span>Subtotal (excl. VAT) ({count} {count === 1 ? "carton" : "cartons"})</span>
                   <span className="font-semibold text-[#111111]">EGP {total.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-gray-500">
+                  <span>VAT{items.some(i => (i.product.vatRate ?? 0.14) === 0) && items.some(i => (i.product.vatRate ?? 0.14) > 0) ? " (mixed rates)" : ""}</span>
+                  <span className="font-semibold text-[#111111]">EGP {vatTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-500">
                   <span>Shipping</span>
                   <span className="text-[#1B4D2E] font-medium">To be confirmed</span>
                 </div>
-                <div className="flex justify-between font-bold text-sm pt-2     border-t border-gray-200">
-                  <span>Total (excl. VAT)</span>
-                  <span>EGP {total.toFixed(2)}</span>
-
-                </div>
                 <div className="flex justify-between font-bold text-sm pt-2 border-t border-gray-200">
-                  <span>Total (excl. VAT)</span>
-                  <span>EGP {total.toFixed(2)}</span>
+                  <span>Total (incl. VAT)</span>
+                  <span className="text-[#1B4D2E]">EGP {totalInclVat.toFixed(2)}</span>
                 </div>
 
                 {total < MIN_ORDER_TOTAL && (

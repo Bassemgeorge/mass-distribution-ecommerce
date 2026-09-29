@@ -10,12 +10,15 @@ interface OrderItem {
   quantity: number;
   unit_price: number;
   subtotal: number;
+  vat_rate: number | null;
 }
 
 interface Order {
   id: string;
   status: string;
   total: number;
+  vat_amount: number | null;
+  total_incl_vat: number | null;
   notes: string | null;
   created_at: string;
   customers: { name: string; business_name: string; phone: string; address: string } | null;
@@ -33,9 +36,9 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
       const { data, error: err } = await supabase
         .from("orders")
         .select(`
-          id, status, total, notes, created_at,
+          id, status, total, vat_amount, total_incl_vat, notes, created_at,
           customers ( name, business_name, phone, address ),
-          order_items ( product_name, quantity, unit_price, subtotal )
+          order_items ( product_name, quantity, unit_price, subtotal, vat_rate )
         `)
         .eq("id", id)
         .single();
@@ -95,7 +98,7 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
           </div>
 
           <p className="text-gray-600 text-sm leading-relaxed mb-1">
-            Your order has been received. Our team will contact you within 2 hours to confirm delivery.
+            A confirmation email is on its way to you. Our team will contact you within 2 hours to confirm delivery.
           </p>
           <p className="text-gray-400 text-sm leading-relaxed" dir="rtl">
             تم استلام طلبك. سيتواصل معك فريقنا خلال ساعتين لتأكيد التوصيل.
@@ -120,9 +123,21 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
               </div>
             ))}
           </div>
-          <div className="border-t border-gray-200 pt-3 flex justify-between font-bold text-sm">
-            <span>Total (ex-VAT)</span>
-            <span className="text-[#1B4D2E]">EGP {order.total.toFixed(2)}</span>
+          <div className="border-t border-gray-200 pt-3 space-y-2 text-sm">
+            <div className="flex justify-between text-gray-500">
+              <span>Subtotal (excl. VAT)</span>
+              <span className="font-semibold text-[#111111]">EGP {order.total.toFixed(2)}</span>
+            </div>
+            {order.vat_amount != null && (
+              <div className="flex justify-between text-gray-500">
+                <span>VAT</span>
+                <span className="font-semibold text-[#111111]">EGP {order.vat_amount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold pt-1 border-t border-gray-200">
+              <span>Total (incl. VAT)</span>
+              <span className="text-[#1B4D2E]">EGP {(order.total_incl_vat ?? order.total).toFixed(2)}</span>
+            </div>
           </div>
           {order.notes && (
             <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100">
