@@ -65,6 +65,27 @@ const css = `
   @keyframes mdP1{0%{transform:scaleX(0)}33.3%{transform:scaleX(1)}33.4%,100%{transform:scaleX(0)}}
   @keyframes mdP2{0%,33.3%{transform:scaleX(0)}66.6%{transform:scaleX(1)}66.7%,100%{transform:scaleX(0)}}
   @keyframes mdP3{0%,66.6%{transform:scaleX(0)}99.9%{transform:scaleX(1)}100%{transform:scaleX(0)}}
+  /* below ~1264px the banner is narrower than 1200px: scale text with it */
+  @media (min-width:761px) and (max-width:1263px){
+    .mdb .scene{padding:5.6vw 3.2vw 3.5vw}
+    .mdb .logo{width:10.3vw;top:1.75vw;right:2.2vw}
+    .mdb .kick{font-size:max(12px,1.2vw);margin-bottom:.8vw}
+    .mdb h2{font-size:3vw}
+    .mdb .en{font-size:max(12px,1.19vw);margin-top:.95vw}
+    .mdb .s3 .en{font-size:max(13px,1.42vw)!important}
+    .mdb .chips{gap:.63vw;margin-top:1.27vw}
+    .mdb .chip{font-size:max(11px,1.03vw);padding:.47vw .95vw}
+    .mdb .cta{font-size:max(13px,1.27vw);padding:.87vw 1.74vw;margin-top:1.42vw}
+    .mdb .cta small{font-size:max(10px,.95vw)}
+    .mdb .prog{bottom:1.4vw;left:3.2vw}
+  }
+  @media (min-width:761px) and (max-width:920px){
+    .mdb .s3 h2{font-size:2.6vw}
+    .mdb .s3 .en{margin-top:.6vw}
+    .mdb .chips{gap:.5vw;margin-top:.8vw}
+    .mdb .chip{padding:.3vw .85vw}
+    .mdb .cta{margin-top:1vw;padding:.7vw 1.74vw}
+  }
   @media (max-width:760px){
     .mdb{aspect-ratio:auto;height:600px}
     .mdb .scene{grid-template-columns:1fr;grid-template-rows:auto 1fr;padding:74px 22px 40px;align-items:start}
