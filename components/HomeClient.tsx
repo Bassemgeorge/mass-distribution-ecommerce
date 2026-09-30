@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { toProduct } from "@/lib/db";
 import HeroCarousel from "@/components/HeroCarousel";
+import SmallOrdersBanner from "@/components/SmallOrdersBanner";
 
 // ── Promo carousel ────────────────────────────────────────────────────────────
 const SALE_END = new Date("2026-09-07T09:00:00+03:00"); // Cairo time
@@ -400,6 +401,11 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
           </div>
         </div>
       </section>
+
+      {/* ── SMALL ORDERS BANNER ──────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-10">
+        <SmallOrdersBanner />
+      </div>
 
       {/* ── EXCLUSIVE 5L OLIVE OIL SPOTLIGHT ─────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#0d1f14] via-[#122b1c] to-[#0a1810] py-16">
