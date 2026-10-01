@@ -31,7 +31,7 @@ const FACETS: {
       Corn: "Corn · ذرة",
       Blend: "Blend · خليط",
       Ghee: "Ghee · سمن",
-      "Frying oil": "Frying oil · زيت قلي",
+      "Frying oil": "Frying oil (Olein) · زيت قلي (أولين)",
     },
   },
   { key: "line", field: "productLine", label: "Brand", labelAr: "الماركة" },
@@ -50,6 +50,11 @@ const FACETS: {
     tagLabels: { small: "Small", medium: "Medium", large: "Large", bulk: "Bulk" },
   },
 ];
+
+// Extra search terms per product_type, for spellings not in the product names
+const TYPE_SEARCH_TERMS: Record<string, string[]> = {
+  "Frying oil": ["Olein", "اولين", "أولين"],
+};
 
 function sortValues(values: string[], order?: string[]) {
   const rank = (v: string) => {
@@ -143,7 +148,13 @@ function ProductsContent() {
   const fuse = useMemo(
     () =>
       new Fuse(allProducts, {
-        keys: ["nameEn", "nameAr", "brand", "category"],
+        keys: [
+          "nameEn",
+          "nameAr",
+          "brand",
+          "category",
+          { name: "typeTerms", getFn: (p) => TYPE_SEARCH_TERMS[p.productType ?? ""] ?? [] },
+        ],
         // 0.5 = more permissive: catches worse typos at the cost of a few extra loose matches
         threshold: 0.5,
         includeScore: true,
