@@ -5,60 +5,108 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Fuse from "fuse.js";
 import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
-import { getProducts, getCategoryCounts, getBrandCounts, toProduct, MappedProduct } from "@/lib/db";
+import { getProducts, getCategoryCounts, getBrandCounts, toProduct, formatSize, MappedProduct } from "@/lib/db";
 import { Search, SlidersHorizontal, X, AlertCircle, ChevronDown } from "lucide-react";
 
-type FacetKey = "type" | "line" | "size";
+type FacetKey = "type" | "line" | "pack" | "size";
 
-// Data-driven: a facet shows for a category once it has ≥2 distinct non-null values there.
-const FACETS: {
+type Facet = {
   key: FacetKey;
-  field: "productType" | "productLine" | "sizeBand";
+  get: (p: MappedProduct) => string | null;
   label: string;
   labelAr: string;
   order?: string[];
+  numeric?: boolean;
   optionLabels?: Record<string, string>;
   tagLabels?: Record<string, string>;
-}[] = [
-  {
-    key: "type",
-    field: "productType",
-    label: "Type",
-    labelAr: "النوع",
-    order: ["Sunflower", "Corn", "Blend", "Ghee", "Frying oil"],
-    optionLabels: {
-      Sunflower: "Sunflower · عباد الشمس",
-      Corn: "Corn · ذرة",
-      Blend: "Blend · خليط",
-      Ghee: "Ghee · سمن",
-      "Frying oil": "Frying oil (Olein) · زيت قلي (أولين)",
-    },
+  format?: (v: string) => string;
+};
+
+const TYPE_FACET: Facet = {
+  key: "type",
+  get: (p) => p.productType,
+  label: "Type",
+  labelAr: "النوع",
+  order: ["Sunflower", "Corn", "Blend", "Ghee", "Frying oil"],
+  optionLabels: {
+    Sunflower: "Sunflower · عباد الشمس",
+    Corn: "Corn · ذرة",
+    Blend: "Blend · خليط",
+    Ghee: "Ghee · سمن",
+    "Frying oil": "Frying oil (Olein) · زيت قلي (أولين)",
+    "Soft drink": "Soft drink · مشروبات غازية",
+    Juice: "Juice · عصير",
+    "Energy drink": "Energy drink · مشروبات طاقة",
+    Water: "Water · مياه",
+    "Malt drink": "Malt drink · مشروب شعير",
+    Syrup: "Syrup · سيرب",
   },
-  { key: "line", field: "productLine", label: "Brand", labelAr: "الماركة" },
-  {
-    key: "size",
-    field: "sizeBand",
-    label: "Size",
-    labelAr: "الحجم",
-    order: ["small", "medium", "large", "bulk"],
-    optionLabels: {
-      small: "Small (up to 1 L/kg) · صغير",
-      medium: "Medium (1.3–2.5) · وسط",
-      large: "Large (4–5) · كبير",
-      bulk: "Bulk & catering (10+) · جملة ومطاعم",
-    },
-    tagLabels: { small: "Small", medium: "Medium", large: "Large", bulk: "Bulk" },
+};
+
+const LINE_FACET: Facet = { key: "line", get: (p) => p.productLine, label: "Brand", labelAr: "الماركة" };
+
+const PACK_FACET: Facet = {
+  key: "pack",
+  get: (p) => p.packType,
+  label: "Pack",
+  labelAr: "العبوة",
+  order: ["Can", "Plastic bottle", "Glass bottle", "Carton"],
+  optionLabels: {
+    Can: "Can · كانز",
+    "Plastic bottle": "Plastic bottle · بلاستيك",
+    "Glass bottle": "Glass bottle · زجاج",
+    Carton: "Carton · كرتون (تتراباك)",
   },
-];
+};
+
+const SIZE_BAND_FACET: Facet = {
+  key: "size",
+  get: (p) => p.sizeBand,
+  label: "Size",
+  labelAr: "الحجم",
+  order: ["small", "medium", "large", "bulk"],
+  optionLabels: {
+    small: "Small (up to 1 L/kg) · صغير",
+    medium: "Medium (1.3–2.5) · وسط",
+    large: "Large (4–5) · كبير",
+    bulk: "Bulk & catering (10+) · جملة ومطاعم",
+  },
+  tagLabels: { small: "Small", medium: "Medium", large: "Large", bulk: "Bulk" },
+};
+
+// Used when a category has sizes but no size bands: one option per actual size, e.g. "250ml"
+const SIZE_VALUE_FACET: Facet = {
+  key: "size",
+  get: (p) => (p.sizeValue == null ? null : `${p.sizeValue}${p.sizeUnit ?? ""}`),
+  label: "Size",
+  labelAr: "الحجم",
+  numeric: true,
+  format: (v) => {
+    const m = v.match(/^([\d.]+)(.*)$/);
+    return m ? formatSize(Number(m[1]), m[2]) : v;
+  },
+};
+
+// Data-driven: a facet shows for a category once it has ≥2 distinct non-null values there.
+const FACETS: Facet[] = [TYPE_FACET, LINE_FACET, PACK_FACET, SIZE_BAND_FACET];
+
+function optionLabel(f: Facet, v: string) {
+  return f.optionLabels?.[v] ?? f.format?.(v) ?? v;
+}
+
+function tagLabel(f: Facet, v: string) {
+  return f.tagLabels?.[v] ?? f.format?.(v) ?? v;
+}
 
 // Extra search terms per product_type, for spellings not in the product names
 const TYPE_SEARCH_TERMS: Record<string, string[]> = {
   "Frying oil": ["Olein", "اولين", "أولين"],
 };
 
-function sortValues(values: string[], order?: string[]) {
+function sortValues(values: string[], f: Facet) {
+  if (f.numeric) return [...values].sort((a, b) => parseFloat(a) - parseFloat(b));
   const rank = (v: string) => {
-    const i = order?.indexOf(v) ?? -1;
+    const i = f.order?.indexOf(v) ?? -1;
     return i === -1 ? Number.MAX_SAFE_INTEGER : i;
   };
   return [...values].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
@@ -84,6 +132,7 @@ function ProductsContent() {
   const facetParams: Record<FacetKey, string | null> = {
     type: searchParams.get("type"),
     line: searchParams.get("line"),
+    pack: searchParams.get("pack"),
     size: searchParams.get("size"),
   };
 
@@ -108,6 +157,7 @@ function ProductsContent() {
       next.forEach((c) => p.append("category", c));
       p.delete("type");
       p.delete("line");
+      p.delete("pack");
       p.delete("size");
       const brand = p.get("brand");
       if (brand && next.length > 0 && !allProducts.some((x) => x.brand === brand && next.includes(x.category))) {
@@ -178,19 +228,22 @@ function ProductsContent() {
   const activeFacets = useMemo(() => {
     if (activeCategories.length !== 1) return [];
     const inCat = allProducts.filter((p) => p.category === activeCategories[0]);
-    return FACETS.map((f) => {
-      const values = new Set<string>();
-      inCat.forEach((p) => {
-        const v = p[f.field];
-        if (v) values.add(v);
-      });
-      return { ...f, values: sortValues([...values], f.order) };
-    }).filter((f) => f.values.length >= 2);
+    const hasSizeBands = inCat.some((p) => p.sizeBand);
+    return FACETS.map((f) => (f === SIZE_BAND_FACET && !hasSizeBands ? SIZE_VALUE_FACET : f))
+      .map((f) => {
+        const values = new Set<string>();
+        inCat.forEach((p) => {
+          const v = f.get(p);
+          if (v) values.add(v);
+        });
+        return { ...f, values: sortValues([...values], f) };
+      })
+      .filter((f) => f.values.length >= 2);
   }, [allProducts, activeCategories]);
 
-  const hasSizeSort =
+  const hasLineSort =
     activeCategories.length === 1 &&
-    allProducts.some((p) => p.category === activeCategories[0] && p.sizeValue != null);
+    allProducts.some((p) => p.category === activeCategories[0] && p.productLine);
 
   // Products matching everything except the facet dropdowns
   const basePool = useMemo(() => {
@@ -215,13 +268,13 @@ function ProductsContent() {
   function matchesFacets(p: MappedProduct, except?: FacetKey) {
     return activeFacets.every((f) => {
       const selected = facetParams[f.key];
-      return f.key === except || !selected || p[f.field] === selected;
+      return f.key === except || !selected || f.get(p) === selected;
     });
   }
 
   const filtered = useMemo(() => {
     const result = basePool.filter((p) => matchesFacets(p));
-    if (search.trim() || !hasSizeSort) return result;
+    if (search.trim() || !hasLineSort) return result;
     return [...result].sort(
       (a, b) =>
         (a.productLine ?? "").localeCompare(b.productLine ?? "") ||
@@ -229,7 +282,7 @@ function ProductsContent() {
         (a.sizeValue ?? Infinity) - (b.sizeValue ?? Infinity)
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [basePool, activeFacets, facetParams.type, facetParams.line, facetParams.size, hasSizeSort, search]);
+  }, [basePool, activeFacets, facetParams.type, facetParams.line, facetParams.pack, facetParams.size, hasLineSort, search]);
 
   const activeFacetTags = activeFacets.filter((f) => facetParams[f.key]);
   const hideBrandChips = activeFacets.some((f) => f.key === "line");
@@ -282,7 +335,7 @@ function ProductsContent() {
                 // scoped down to a subset the user didn't intend.
                 if (search.trim() === "" && val.trim() !== "") {
                   updateParams((p) => {
-                    ["category", "brand", "sale", "type", "line", "size"].forEach((k) => p.delete(k));
+                    ["category", "brand", "sale", "type", "line", "pack", "size"].forEach((k) => p.delete(k));
                   }, "");
                 }
                 setSearch(val);
@@ -379,7 +432,15 @@ function ProductsContent() {
         {/* Category-specific dropdowns */}
         {!loading && activeFacets.length > 0 && (
           <div className="bg-[#F7F7F5] border border-gray-200 rounded-xl p-4 mb-6">
-            <div className={`grid grid-cols-1 gap-3 ${activeFacets.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+            <div
+              className={`grid gap-3 ${
+                activeFacets.length >= 4
+                  ? "grid-cols-2 lg:grid-cols-4"
+                  : activeFacets.length === 3
+                    ? "grid-cols-1 md:grid-cols-3"
+                    : "grid-cols-1 md:grid-cols-2"
+              }`}
+            >
               {activeFacets.map((f) => {
                 const selected = facetParams[f.key] ?? "";
                 const others = basePool.filter((p) => matchesFacets(p, f.key));
@@ -398,10 +459,10 @@ function ProductsContent() {
                       >
                         <option value="">All ({others.length})</option>
                         {f.values.map((v) => {
-                          const n = others.filter((p) => p[f.field] === v).length;
+                          const n = others.filter((p) => f.get(p) === v).length;
                           return (
                             <option key={v} value={v} disabled={n === 0 && v !== selected}>
-                              {f.optionLabels?.[v] ?? v} ({n})
+                              {optionLabel(f, v)} ({n})
                             </option>
                           );
                         })}
@@ -422,7 +483,7 @@ function ProductsContent() {
                       key={f.key}
                       className="flex items-center gap-1.5 px-3 py-1 bg-[#1B4D2E] text-white text-xs font-medium rounded-full"
                     >
-                      {f.tagLabels?.[v] ?? v}
+                      {tagLabel(f, v)}
                       <button onClick={() => setParam(f.key, null)} aria-label={`Remove ${v}`}>
                         <X size={11} />
                       </button>

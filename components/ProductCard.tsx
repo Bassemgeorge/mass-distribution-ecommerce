@@ -6,6 +6,7 @@ import { Check, Lock, Minus, Plus, ShoppingCart } from "lucide-react";
 import ProductImage from "./ProductImage";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { formatSize } from "@/lib/db";
 
 interface Props {
   product: CartProduct;
@@ -107,7 +108,7 @@ export default function ProductCard({ product }: Props) {
         ) : null}
         {product.sizeValue != null && (
           <span className="absolute bottom-3 left-3 bg-white/90 border border-gray-200 text-[#1B4D2E] text-xs font-bold px-2.5 py-1 rounded-full">
-            {product.sizeValue} {product.sizeUnit}
+            {formatSize(product.sizeValue, product.sizeUnit)}
           </span>
         )}
       </div>

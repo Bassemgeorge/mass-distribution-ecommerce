@@ -31,6 +31,12 @@ export interface DbProduct {
   size_value?: number | string | null;
   size_unit?: string | null;
   size_band?: string | null;
+  pack_type?: string | null;
+}
+
+export function formatSize(value: number, unit: string | null | undefined): string {
+  if (unit === "ml" && value >= 1000) return `${value / 1000} L`;
+  return unit ? `${value} ${unit}` : String(value);
 }
 
 export function formatEGP(n: number): string {
@@ -72,6 +78,7 @@ export function toProduct(p: DbProduct) {
     sizeValue: p.size_value == null || p.size_value === "" ? null : Number(p.size_value),
     sizeUnit: p.size_unit ?? null,
     sizeBand: p.size_band ?? null,
+    packType: p.pack_type ?? null,
   };
 }
 
