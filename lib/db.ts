@@ -36,6 +36,7 @@ export interface DbProduct {
 
 export function formatSize(value: number, unit: string | null | undefined): string {
   if (unit === "ml" && value >= 1000) return `${value / 1000} L`;
+  if (unit === "g" && value >= 1000) return `${value / 1000} kg`;
   return unit ? `${value} ${unit}` : String(value);
 }
 

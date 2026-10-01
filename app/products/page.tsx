@@ -40,7 +40,60 @@ const TYPE_FACET: Facet = {
     Water: "Water · مياه",
     "Malt drink": "Malt drink · مشروب شعير",
     Syrup: "Syrup · سيرب",
+    "Fava beans": "Fava beans · فول مدمس",
+    "Sweet corn": "Sweet corn · ذرة حلوة",
+    "Kidney beans": "Kidney beans · فاصوليا حمراء",
+    "Loose tea": "Loose tea · شاي ناعم",
+    "Tea bags": "Tea bags · شاي فتلة",
+    "Instant coffee": "Instant coffee · قهوة سريعة التحضير",
+    "Coffee mix 3in1": "Coffee mix 3in1 · قهوة 3×1",
+    Cappuccino: "Cappuccino · كابتشينو",
+    Tuna: "Tuna · تونة",
+    Tahini: "Tahini · طحينة",
+    Honey: "Honey · عسل",
+    Sugar: "Sugar · سكر",
+    Rice: "Rice · أرز",
+    Flour: "Flour · دقيق",
+    Salt: "Salt · ملح",
+    Vinegar: "Vinegar · خل",
+    "Tomato sauce & paste": "Tomato sauce & paste · صلصة ومعجون طماطم",
+    "Sundried tomatoes": "Sundried tomatoes · طماطم مجففة",
+    "Frozen vegetables": "Frozen vegetables · خضار مجمد",
+    "Frozen fruit": "Frozen fruit · فاكهة مجمدة",
+    "Whole chicken": "Whole chicken · فراخ كاملة",
+    "Chicken parts": "Chicken parts · أجزاء فراخ",
+    Milk: "Milk · حليب",
+    "Barista milk": "Barista milk · حليب باريستا",
+    "Whipping cream": "Whipping cream · كريمة خفق",
+    "Cooking cream": "Cooking cream · كريمة طهي",
+    "Extra virgin": "Extra virgin · بكر ممتاز",
+    Virgin: "Virgin · بكر",
+    "Green olives": "Green olives · زيتون أخضر",
+    "Black olives": "Black olives · زيتون أسود",
+    "Kalamata olives": "Kalamata olives · زيتون كلاماتا",
+    "Olive paste": "Olive paste · زيتون مفروم",
+    Pickles: "Pickles · مخللات",
+    Pasta: "Pasta · مكرونة",
+    Lasagna: "Lasagna · لازانيا",
+    "Shells & cannelloni": "Shells & cannelloni · شيل وكانيلوني",
+    Ketchup: "Ketchup · كاتشب",
+    Mustard: "Mustard · مسطردة",
+    Mayonnaise: "Mayonnaise · مايونيز",
+    BBQ: "BBQ · باربكيو",
+    "Hot & chili sauce": "Hot & chili sauce · صوص حار وشيلي",
+    "Dressings & dips": "Dressings & dips · صوصات ودريسنج",
+    "Spices & seasoning": "Spices & seasoning · توابل وتتبيلات",
+    "Stock powder": "Stock powder · مرقة بودر",
+    "Stock cubes": "Stock cubes · مرقة مكعبات",
+    "Sauce base": "Sauce base · قاعدة صوص",
+    Soups: "Soups · شوربة",
+    "Mashed potato": "Mashed potato · بطاطس مهروسة",
   },
+};
+
+// Per-category overrides for a facet's heading
+const FACET_HEADINGS: Record<string, Partial<Record<FacetKey, { label: string; labelAr: string }>>> = {
+  "Olive Oil": { type: { label: "Grade", labelAr: "الدرجة" } },
 };
 
 const LINE_FACET: Facet = { key: "line", get: (p) => p.productLine, label: "Brand", labelAr: "الماركة" };
@@ -56,6 +109,15 @@ const PACK_FACET: Facet = {
     "Plastic bottle": "Plastic bottle · بلاستيك",
     "Glass bottle": "Glass bottle · زجاج",
     Carton: "Carton · كرتون (تتراباك)",
+    Tin: "Tin · صفيحة",
+    Jar: "Jar · برطمان",
+    Pail: "Pail · جردل",
+    Pouch: "Pouch · باوتش",
+    Amphora: "Amphora · أمفورا",
+    "Box / pack": "Box / pack · علبة",
+    Sachets: "Sachets · أظرف",
+    Bottle: "Bottle · زجاجة",
+    Bulk: "Bulk · جركن / جردل (جملة)",
   },
 };
 
@@ -104,7 +166,15 @@ const TYPE_SEARCH_TERMS: Record<string, string[]> = {
 };
 
 function sortValues(values: string[], f: Facet) {
-  if (f.numeric) return [...values].sort((a, b) => parseFloat(a) - parseFloat(b));
+  if (f.numeric) {
+    // keys look like "250ml" / "1.5L" / "16000g"; compare in base units (ml / g)
+    const amount = (v: string) => {
+      const m = v.match(/^([\d.]+)(.*)$/);
+      if (!m) return Infinity;
+      return Number(m[1]) * (m[2] === "L" || m[2] === "kg" ? 1000 : 1);
+    };
+    return [...values].sort((a, b) => amount(a) - amount(b) || a.localeCompare(b));
+  }
   const rank = (v: string) => {
     const i = f.order?.indexOf(v) ?? -1;
     return i === -1 ? Number.MAX_SAFE_INTEGER : i;
@@ -236,7 +306,7 @@ function ProductsContent() {
           const v = f.get(p);
           if (v) values.add(v);
         });
-        return { ...f, values: sortValues([...values], f) };
+        return { ...f, ...FACET_HEADINGS[activeCategories[0]]?.[f.key], values: sortValues([...values], f) };
       })
       .filter((f) => f.values.length >= 2);
   }, [allProducts, activeCategories]);
@@ -285,7 +355,9 @@ function ProductsContent() {
   }, [basePool, activeFacets, facetParams.type, facetParams.line, facetParams.pack, facetParams.size, hasLineSort, search]);
 
   const activeFacetTags = activeFacets.filter((f) => facetParams[f.key]);
-  const hideBrandChips = activeFacets.some((f) => f.key === "line");
+  // Product-line data replaces the generic brand chips (with ≥2 lines the Brand dropdown takes over;
+  // with a single line there is nothing to choose)
+  const hideBrandChips = hasLineSort;
 
   const hasActiveFilters =
   activeCategories.length > 0 ||
