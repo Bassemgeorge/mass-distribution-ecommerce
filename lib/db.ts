@@ -26,6 +26,11 @@ export interface DbProduct {
   is_on_sale: boolean | null;
   original_carton_price: number | null;
   vat_rate?: number | null;
+  product_line?: string | null;
+  product_type?: string | null;
+  size_value?: number | string | null;
+  size_unit?: string | null;
+  size_band?: string | null;
 }
 
 export function formatEGP(n: number): string {
@@ -61,6 +66,12 @@ export function toProduct(p: DbProduct) {
     originalCartonPrice: p.original_carton_price ?? null,
     // null means "unknown / not tracked"; treat as in-stock
     isSoldOut: p.stock !== null && p.stock <= 0,
+    productLine: p.product_line ?? null,
+    productType: p.product_type ?? null,
+    // numeric columns arrive from PostgREST as strings
+    sizeValue: p.size_value == null || p.size_value === "" ? null : Number(p.size_value),
+    sizeUnit: p.size_unit ?? null,
+    sizeBand: p.size_band ?? null,
   };
 }
 

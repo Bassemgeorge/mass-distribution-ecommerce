@@ -105,6 +105,11 @@ export default function ProductCard({ product }: Props) {
             Sale
           </span>
         ) : null}
+        {product.sizeValue != null && (
+          <span className="absolute bottom-3 left-3 bg-white/90 border border-gray-200 text-[#1B4D2E] text-xs font-bold px-2.5 py-1 rounded-full">
+            {product.sizeValue} {product.sizeUnit}
+          </span>
+        )}
       </div>
 
       {/* Content */}

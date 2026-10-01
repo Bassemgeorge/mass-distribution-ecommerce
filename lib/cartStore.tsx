@@ -20,6 +20,8 @@ export interface CartProduct {
   originalCartonPrice?: number | null;
   isSoldOut?: boolean;
   vatRate?: number;
+  sizeValue?: number | null;
+  sizeUnit?: string | null;
 }
 
 export interface CartItem {

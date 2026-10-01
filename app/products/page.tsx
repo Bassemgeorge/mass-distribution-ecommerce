@@ -1,15 +1,67 @@
 "use client";
 
 import { useState, useEffect, Suspense, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Fuse from "fuse.js";
 import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { getProducts, getCategoryCounts, getBrandCounts, toProduct, MappedProduct } from "@/lib/db";
-import { Search, SlidersHorizontal, X, AlertCircle } from "lucide-react";
+import { Search, SlidersHorizontal, X, AlertCircle, ChevronDown } from "lucide-react";
+
+type FacetKey = "type" | "line" | "size";
+
+// Data-driven: a facet shows for a category once it has ≥2 distinct non-null values there.
+const FACETS: {
+  key: FacetKey;
+  field: "productType" | "productLine" | "sizeBand";
+  label: string;
+  labelAr: string;
+  order?: string[];
+  optionLabels?: Record<string, string>;
+  tagLabels?: Record<string, string>;
+}[] = [
+  {
+    key: "type",
+    field: "productType",
+    label: "Type",
+    labelAr: "النوع",
+    order: ["Sunflower", "Corn", "Blend", "Ghee", "Frying oil"],
+    optionLabels: {
+      Sunflower: "Sunflower · عباد الشمس",
+      Corn: "Corn · ذرة",
+      Blend: "Blend · خليط",
+      Ghee: "Ghee · سمن",
+      "Frying oil": "Frying oil · زيت قلي",
+    },
+  },
+  { key: "line", field: "productLine", label: "Brand", labelAr: "الماركة" },
+  {
+    key: "size",
+    field: "sizeBand",
+    label: "Size",
+    labelAr: "الحجم",
+    order: ["small", "medium", "large", "bulk"],
+    optionLabels: {
+      small: "Small (up to 1 L/kg) · صغير",
+      medium: "Medium (1.3–2.5) · وسط",
+      large: "Large (4–5) · كبير",
+      bulk: "Bulk & catering (10+) · جملة ومطاعم",
+    },
+    tagLabels: { small: "Small", medium: "Medium", large: "Large", bulk: "Bulk" },
+  },
+];
+
+function sortValues(values: string[], order?: string[]) {
+  const rank = (v: string) => {
+    const i = order?.indexOf(v) ?? -1;
+    return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+  };
+  return [...values].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+}
 
 function ProductsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [allProducts, setAllProducts]       = useState<MappedProduct[]>([]);
   const [categories,  setCategories]        = useState<string[]>([]);
@@ -17,39 +69,54 @@ function ProductsContent() {
   const [loading,     setLoading]           = useState(true);
   const [error,       setError]             = useState<string | null>(null);
 
-  const [activeCategories, setActiveCategories] =useState<string[]>([]);
-  const [activeBrand,    setActiveBrand]    = useState("All");
   const [search,         setSearch]         = useState("");
   const [showFilters,    setShowFilters]    = useState(false);
-  const [saleOnly,       setSaleOnly]       = useState(false);
 
-  // Init filters from URL params
- useEffect(() => {
-  const cat = searchParams.get("category");
-  const brand = searchParams.get("brand");
-  const searchValue = searchParams.get("search");
-  const saleParam = searchParams.get("sale");
+  // Filters live in the URL so links are shareable and back/forward works
+  const activeCategories = useMemo(() => searchParams.getAll("category"), [searchParams]);
+  const activeBrand = searchParams.get("brand") ?? "All";
+  const saleOnly = searchParams.get("sale") === "true";
+  const facetParams: Record<FacetKey, string | null> = {
+    type: searchParams.get("type"),
+    line: searchParams.get("line"),
+    size: searchParams.get("size"),
+  };
 
-  setActiveCategories((prev) => {
-    const next = cat ? [cat] : [];
-    return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
-  });
+  // Search text is typed locally; only sync it when the URL's value changes
+  const urlSearch = searchParams.get("search") ?? "";
+  useEffect(() => {
+    setSearch(urlSearch);
+  }, [urlSearch]);
 
-  setActiveBrand((prev) => {
-    const next = brand ?? "All";
-    return prev === next ? prev : next;
-  });
+  function updateParams(mutate: (p: URLSearchParams) => void, searchText = search) {
+    const p = new URLSearchParams(searchParams.toString());
+    mutate(p);
+    if (searchText.trim()) p.set("search", searchText);
+    else p.delete("search");
+    const qs = p.toString();
+    router.push(qs ? `/products?${qs}` : "/products", { scroll: false });
+  }
 
-  setSearch((prev) => {
-    const next = searchValue ?? "";
-    return prev === next ? prev : next;
-  });
+  function setCategoryList(next: string[]) {
+    updateParams((p) => {
+      p.delete("category");
+      next.forEach((c) => p.append("category", c));
+      p.delete("type");
+      p.delete("line");
+      p.delete("size");
+      const brand = p.get("brand");
+      if (brand && next.length > 0 && !allProducts.some((x) => x.brand === brand && next.includes(x.category))) {
+        p.delete("brand");
+      }
+    });
+  }
 
-  setSaleOnly((prev) => {
-    const next = saleParam === "true";
-    return prev === next ? prev : next;
-  });
-}, [searchParams]);
+  function setParam(key: string, value: string | null) {
+    updateParams((p) => {
+      if (value) p.set(key, value);
+      else p.delete(key);
+    });
+  }
 
   // Fetch from Supabase
   useEffect(() => {
@@ -84,37 +151,89 @@ function ProductsContent() {
     [allProducts]
   );
 
-  const filtered = useMemo(() => {
-    const catBrandPool = allProducts.filter((p) => {
+  // Brand chips are scoped to the selected categories
+  const brandOptions = useMemo(() => {
+    if (activeCategories.length === 0) return brands.map((b) => ({ brand: b, count: null as number | null }));
+    const counts = new Map<string, number>();
+    allProducts.forEach((p) => {
+      if (activeCategories.includes(p.category)) counts.set(p.brand, (counts.get(p.brand) ?? 0) + 1);
+    });
+    return [...counts.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([brand, count]) => ({ brand, count }));
+  }, [allProducts, activeCategories, brands]);
+
+  // Facets available for the single selected category
+  const activeFacets = useMemo(() => {
+    if (activeCategories.length !== 1) return [];
+    const inCat = allProducts.filter((p) => p.category === activeCategories[0]);
+    return FACETS.map((f) => {
+      const values = new Set<string>();
+      inCat.forEach((p) => {
+        const v = p[f.field];
+        if (v) values.add(v);
+      });
+      return { ...f, values: sortValues([...values], f.order) };
+    }).filter((f) => f.values.length >= 2);
+  }, [allProducts, activeCategories]);
+
+  const hasSizeSort =
+    activeCategories.length === 1 &&
+    allProducts.some((p) => p.category === activeCategories[0] && p.sizeValue != null);
+
+  // Products matching everything except the facet dropdowns
+  const basePool = useMemo(() => {
+    const pool = allProducts.filter((p) => {
       const matchCat   = activeCategories.length === 0 || activeCategories.includes(p.category);
       const matchBrand = activeBrand === "All" || p.brand === activeBrand;
       const matchSale  = !saleOnly || p.isOnSale;
       return matchCat && matchBrand && matchSale;
     });
 
-    if (!search.trim()) return catBrandPool;
+    if (!search.trim()) return pool;
 
     // fuse.search() already returns results ordered best-match-first — preserve
     // that order instead of falling back to the original catalog order.
-    const poolIds = new Set(catBrandPool.map((p) => p.id));
+    const poolIds = new Set(pool.map((p) => p.id));
     return fuse
       .search(search)
       .map((r) => r.item)
       .filter((p) => poolIds.has(p.id));
   }, [allProducts, activeCategories, activeBrand, saleOnly, search, fuse]);
 
+  function matchesFacets(p: MappedProduct, except?: FacetKey) {
+    return activeFacets.every((f) => {
+      const selected = facetParams[f.key];
+      return f.key === except || !selected || p[f.field] === selected;
+    });
+  }
+
+  const filtered = useMemo(() => {
+    const result = basePool.filter((p) => matchesFacets(p));
+    if (search.trim() || !hasSizeSort) return result;
+    return [...result].sort(
+      (a, b) =>
+        (a.productLine ?? "").localeCompare(b.productLine ?? "") ||
+        (a.productType ?? "").localeCompare(b.productType ?? "") ||
+        (a.sizeValue ?? Infinity) - (b.sizeValue ?? Infinity)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [basePool, activeFacets, facetParams.type, facetParams.line, facetParams.size, hasSizeSort, search]);
+
+  const activeFacetTags = activeFacets.filter((f) => facetParams[f.key]);
+  const hideBrandChips = activeFacets.some((f) => f.key === "line");
+
   const hasActiveFilters =
   activeCategories.length > 0 ||
   activeBrand !== "All" ||
   search !== "" ||
-  saleOnly;
+  saleOnly ||
+  activeFacetTags.length > 0;
 
   function clearAll() {
-  setActiveCategories([]);
-  setActiveBrand("All");
-  setSearch("");
-  setSaleOnly(false);
-}
+    setSearch("");
+    router.push("/products", { scroll: false });
+  }
   return (
     <div className="min-h-screen bg-white">
       {/* Page header */}
@@ -151,9 +270,9 @@ function ProductsContent() {
                 // active brand/category/sale filters so the search isn't silently
                 // scoped down to a subset the user didn't intend.
                 if (search.trim() === "" && val.trim() !== "") {
-                  setActiveCategories([]);
-                  setActiveBrand("All");
-                  setSaleOnly(false);
+                  updateParams((p) => {
+                    ["category", "brand", "sale", "type", "line", "size"].forEach((k) => p.delete(k));
+                  }, "");
                 }
                 setSearch(val);
               }}
@@ -161,7 +280,7 @@ function ProductsContent() {
             />
           </div>
           <button
-            onClick={() => setSaleOnly((v) => !v)}
+            onClick={() => setParam("sale", saleOnly ? null : "true")}
             className={`flex items-center gap-1.5 px-4 py-2.5 border rounded-lg text-sm font-medium transition-colors ${
               saleOnly ? "border-red-500 bg-red-600 text-white" : "border-gray-200 text-gray-600 hover:border-red-300 bg-white"
             }`}
@@ -191,13 +310,14 @@ function ProductsContent() {
         {/* Expandable filter panel */}
         {showFilters && (
           <div className="bg-[#F7F7F5] border border-gray-200 rounded-xl p-5 mb-6 space-y-4">
+            {!hideBrandChips && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2.5">Brand</p>
               <div className="flex flex-wrap gap-2">
-                {["All", ...brands].map((b) => (
+                {[{ brand: "All", count: null as number | null }, ...brandOptions].map(({ brand: b, count }) => (
                   <button
                     key={b}
-                    onClick={() => setActiveBrand(b)}
+                    onClick={() => setParam("brand", b === "All" ? null : b)}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
                       activeBrand === b
                         ? "bg-[#1B4D2E] text-white border-[#1B4D2E]"
@@ -205,10 +325,12 @@ function ProductsContent() {
                     }`}
                   >
                     {b}
+                    {count != null && <span className="ml-1 opacity-60">{count}</span>}
                   </button>
                 ))}
               </div>
             </div>
+            )}
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2.5"  >Category</p>
@@ -217,17 +339,16 @@ function ProductsContent() {
                   <button
                     key={cat}
                     onClick={() => {
-                       if (cat === "All") {
-                       setActiveCategories([]);
+                      if (cat === "All") {
+                        setCategoryList([]);
                         return;
-                              }
-
-                        setActiveCategories((prev) =>
-                        prev.includes(cat)
-                         ? prev.filter((c) => c !== cat)
-                         : [...prev, cat]
-                    );
-                         }}
+                      }
+                      setCategoryList(
+                        activeCategories.includes(cat)
+                          ? activeCategories.filter((c) => c !== cat)
+                          : [...activeCategories, cat]
+                      );
+                    }}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
                       (cat === "All"
                           ? activeCategories.length === 0
@@ -244,6 +365,64 @@ function ProductsContent() {
           </div>
         )}
 
+        {/* Category-specific dropdowns */}
+        {!loading && activeFacets.length > 0 && (
+          <div className="bg-[#F7F7F5] border border-gray-200 rounded-xl p-4 mb-6">
+            <div className={`grid grid-cols-1 gap-3 ${activeFacets.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+              {activeFacets.map((f) => {
+                const selected = facetParams[f.key] ?? "";
+                const others = basePool.filter((p) => matchesFacets(p, f.key));
+                return (
+                  <label key={f.key} className="block min-w-0">
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
+                      {f.label} · <span dir="rtl">{f.labelAr}</span>
+                    </span>
+                    <span className="relative block">
+                      <select
+                        value={selected}
+                        onChange={(e) => setParam(f.key, e.target.value || null)}
+                        className={`w-full appearance-none rounded-lg border bg-white pl-3 pr-9 py-2.5 text-sm transition-colors focus:outline-none focus:border-[#1B4D2E] ${
+                          selected ? "border-[#1B4D2E] text-[#1B4D2E] font-semibold" : "border-gray-200 text-gray-700"
+                        }`}
+                      >
+                        <option value="">All ({others.length})</option>
+                        {f.values.map((v) => {
+                          const n = others.filter((p) => p[f.field] === v).length;
+                          return (
+                            <option key={v} value={v} disabled={n === 0 && v !== selected}>
+                              {f.optionLabels?.[v] ?? v} ({n})
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {activeFacetTags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {activeFacetTags.map((f) => {
+                  const v = facetParams[f.key]!;
+                  return (
+                    <span
+                      key={f.key}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-[#1B4D2E] text-white text-xs font-medium rounded-full"
+                    >
+                      {f.tagLabels?.[v] ?? v}
+                      <button onClick={() => setParam(f.key, null)} aria-label={`Remove ${v}`}>
+                        <X size={11} />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Active filter chips */}
         {!showFilters && hasActiveFilters && (
           <div className="flex flex-wrap gap-2 mb-4">
@@ -255,11 +434,7 @@ function ProductsContent() {
     >
       {cat}
       <button
-        onClick={() =>
-          setActiveCategories((prev) =>
-            prev.filter((c) => c !== cat)
-          )
-        }
+        onClick={() => setCategoryList(activeCategories.filter((c) => c !== cat))}
       >
         <X size={11} />
       </button>
