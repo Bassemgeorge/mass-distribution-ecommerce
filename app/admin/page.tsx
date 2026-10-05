@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { ShoppingBag, Users, DollarSign, MessageSquare, TrendingUp, Loader2, ChevronRight } from "lucide-react";
+import { ShoppingBag, Users, DollarSign, MessageSquare, TrendingUp, Loader2, ChevronRight, PhoneCall, CalendarClock, UserPlus } from "lucide-react";
+import { useStaffRole } from "@/context/StaffRoleContext";
+import { formatEGP } from "@/lib/db";
+import { cairoDate, orderTotalInclVat } from "@/lib/followups";
 
 const STATUS_COLORS: Record<string, string> = {
   pending:    "bg-amber-50 text-amber-700 border-amber-200",
@@ -21,7 +24,79 @@ interface RecentOrder {
   customers: { business_name: string } | null;
 }
 
-export default function AdminDashboard() {
+export default function DashboardPage() {
+  const { role } = useStaffRole();
+  return role === "sales" ? <SalesDashboard /> : <AdminDashboard />;
+}
+
+function SalesDashboard() {
+  const [stats, setStats] = useState<{ toCall: number; callbacksDue: number; signups: number; orders: number; ordersTotal: number } | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      const today = cairoDate();
+      const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+      const [custRes, signupRes, ordersRes] = await Promise.all([
+        supabase.from("customers").select("follow_up_status, next_follow_up_date").in("follow_up_status", ["new", "call_back"]),
+        supabase
+          .from("customers")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", weekAgo)
+          .or("follow_up_status.is.null,follow_up_status.neq.internal"),
+        supabase.from("orders").select("total, total_incl_vat, vat_amount, status").gte("created_at", weekAgo).neq("status", "cancelled"),
+      ]);
+
+      const rows = custRes.data ?? [];
+      const callbacksDue = rows.filter((c) => c.follow_up_status === "call_back" && c.next_follow_up_date && c.next_follow_up_date <= today).length;
+      const orders = ordersRes.data ?? [];
+      setStats({
+        toCall: rows.filter((c) => c.follow_up_status === "new").length + callbacksDue,
+        callbacksDue,
+        signups: signupRes.count ?? 0,
+        orders: orders.length,
+        ordersTotal: orders.reduce((s, o) => s + orderTotalInclVat(o), 0),
+      });
+    }
+    load();
+  }, []);
+
+  const tiles = [
+    { href: "/admin/follow-ups", label: "To call today", value: stats?.toCall, icon: PhoneCall, color: "bg-[#1B4D2E]/10 text-[#1B4D2E]" },
+    { href: "/admin/follow-ups?tab=callbacks", label: "Call backs due", value: stats?.callbacksDue, icon: CalendarClock, color: "bg-amber-50 text-amber-600" },
+    { href: "/admin/customers", label: "New sign-ups (7 days)", value: stats?.signups, icon: UserPlus, color: "bg-blue-50 text-blue-600" },
+    {
+      href: "/admin/orders",
+      label: "Website orders (7 days)",
+      value: stats?.orders,
+      sub: stats ? `${formatEGP(stats.ordersTotal)} incl. VAT` : undefined,
+      icon: ShoppingBag,
+      color: "bg-purple-50 text-purple-600",
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-[#111111]">Dashboard</h1>
+        <p className="text-gray-400 text-sm">Your follow-up work for today</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {tiles.map(({ href, label, value, sub, icon: Icon, color }) => (
+          <Link key={label} href={href} className="bg-white rounded-xl border border-gray-200 p-5 hover:border-[#1B4D2E] transition-colors">
+            <div className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center mb-3`}>
+              <Icon size={18} />
+            </div>
+            {stats ? <p className="text-2xl font-bold text-[#111111]">{value}</p> : <div className="h-7 w-14 bg-gray-100 rounded animate-pulse mb-1" />}
+            <p className="text-xs text-gray-400 mt-0.5">{label}</p>
+            {sub && <p className="text-xs font-semibold text-[#1B4D2E] mt-1">{sub}</p>}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AdminDashboard() {
   const [stats, setStats]   = useState({ orders: 0, pending: 0, revenue: 0, inquiries: 0 });
   const [recent, setRecent] = useState<RecentOrder[]>([]);
   const [loading, setLoad]  = useState(true);

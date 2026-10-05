@@ -14,11 +14,14 @@ import {
   Menu,
   ChevronRight,
   Upload,
+  PhoneCall,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { StaffInfo, StaffRoleProvider, canAccess } from "@/context/StaffRoleContext";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/follow-ups", label: "Follow-ups", icon: PhoneCall },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/import-prices", label: "Import Prices", icon: Upload },
@@ -35,6 +38,7 @@ export default function AdminLayoutClient({
   const router = useRouter();
 
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [staff, setStaff] = useState<StaffInfo | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isLogin = pathname === "/admin/login";
@@ -60,17 +64,30 @@ export default function AdminLayoutClient({
         return;
       }
 
-      const { data: isAdmin, error } = await supabase.rpc("is_admin");
+      const { data: role, error } = await supabase.rpc("my_staff_role");
 
       if (cancelled) return;
 
-      if (error || isAdmin !== true) {
+      if (error || (role !== "admin" && role !== "sales")) {
         await supabase.auth.signOut();
         setAuthed(false);
         router.replace("/admin/login");
         return;
       }
 
+      const { data: staffRow } = await supabase
+        .from("staff_roles")
+        .select("name")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      setStaff({
+        role,
+        userId: session.user.id,
+        name: staffRow?.name || session.user.email || (role === "admin" ? "Admin" : "Sales"),
+      });
       setAuthed(true);
     }
 
@@ -88,6 +105,13 @@ export default function AdminLayoutClient({
     };
   }, [isLogin, router]);
 
+  const blocked = !isLogin && staff !== null && !canAccess(staff.role, pathname);
+
+  // Sales users opening an admin-only page by URL land on their work queue instead
+  useEffect(() => {
+    if (blocked) router.replace("/admin/follow-ups");
+  }, [blocked, router]);
+
   async function signOut() {
     await supabase.auth.signOut();
     router.push("/admin/login");
@@ -95,7 +119,7 @@ export default function AdminLayoutClient({
 
   if (isLogin) return <>{children}</>;
 
-  if (authed === null) {
+  if (authed === null || (authed && (!staff || blocked))) {
     return (
       <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-[#1B4D2E] border-t-transparent rounded-full animate-spin" />
@@ -103,7 +127,9 @@ export default function AdminLayoutClient({
     );
   }
 
-  if (!authed) return null;
+  if (!authed || !staff) return null;
+
+  const nav = NAV.filter(({ href }) => canAccess(staff.role, href));
 
   function isActive(href: string) {
     if (href === "/admin") return pathname === "/admin";
@@ -129,7 +155,7 @@ export default function AdminLayoutClient({
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {NAV.map(({ href, label, icon: Icon }) => (
+        {nav.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
@@ -148,6 +174,18 @@ export default function AdminLayoutClient({
       </nav>
 
       <div className="px-3 py-4 border-t border-white/10 space-y-1">
+        <div className="px-3 pb-2 flex items-center gap-2 min-w-0">
+          <span className="text-sm text-gray-200 font-medium truncate" dir="auto" title={staff.name}>
+            {staff.name}
+          </span>
+          <span
+            className={`ml-auto flex-shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+              staff.role === "admin" ? "bg-[#3AE18B]/15 text-[#3AE18B]" : "bg-sky-400/15 text-sky-300"
+            }`}
+          >
+            {staff.role === "admin" ? "Admin" : "Sales"}
+          </span>
+        </div>
         <Link
           href="/"
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-300 transition-colors"
@@ -214,7 +252,9 @@ export default function AdminLayoutClient({
           </button>
         </div>
 
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-6">
+          <StaffRoleProvider value={staff}>{children}</StaffRoleProvider>
+        </main>
       </div>
     </div>
   );

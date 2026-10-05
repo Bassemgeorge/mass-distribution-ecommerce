@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Loader2, RefreshCw, X, CheckCircle, XCircle, Eye } from "lucide-react";
+import { useStaffRole } from "@/context/StaffRoleContext";
+import { ContactButtons, FollowUpTarget, LogFollowUpButton, LogFollowUpModal, useToast } from "@/components/admin/FollowUpUI";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",
@@ -95,6 +97,17 @@ export default function AdminOrdersPage() {
   const [modalLoading, setML] = useState(false);
   const [updating, setUpd] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { role } = useStaffRole();
+  const canEdit = role === "admin";
+  const [logging, setLogging] = useState<{ customer: FollowUpTarget; orderId: string } | null>(null);
+  const { toast, showToast } = useToast();
+
+  function openFollowUp(o: AdminOrder) {
+    setLogging({
+      customer: { id: o.customer_id, business_name: o.customers?.business_name ?? null, name: o.customers?.name ?? null },
+      orderId: o.id,
+    });
+  }
 
   const load = useCallback(async () => {
     setLoad(true);
@@ -271,10 +284,16 @@ export default function AdminOrdersPage() {
                       </td>
 
                       <td className="px-4 py-3">
-                        <p className="text-sm font-medium text-[#111111] leading-tight">
+                        <p className="text-sm font-medium text-[#111111] leading-tight" dir="auto">
                           {o.customers?.business_name ?? "—"}
                         </p>
-                        <p className="text-xs text-gray-400">{o.customers?.name}</p>
+                        <p className="text-xs text-gray-400" dir="auto">{o.customers?.name}</p>
+                        {o.customers?.phone && (
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs text-gray-500" dir="ltr">{o.customers.phone}</span>
+                            <ContactButtons phone={o.customers.phone} name={o.customers.name} compact />
+                          </div>
+                        )}
                       </td>
 
                       <td className="px-4 py-3 text-xs text-gray-400 hidden sm:table-cell whitespace-nowrap">
@@ -317,7 +336,7 @@ export default function AdminOrdersPage() {
 
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
-                          {o.status === "pending" && (
+                          {canEdit && o.status === "pending" && (
                             <>
                               <button
                                 onClick={() => updateStatus(o.id, "confirmed")}
@@ -339,7 +358,7 @@ export default function AdminOrdersPage() {
                             </>
                           )}
 
-                          {o.status === "confirmed" && (
+                          {canEdit && o.status === "confirmed" && (
                             <button
                               onClick={() => updateStatus(o.id, "processing")}
                               disabled={updating === o.id}
@@ -350,7 +369,7 @@ export default function AdminOrdersPage() {
                             </button>
                           )}
 
-                          {o.status === "processing" && (
+                          {canEdit && o.status === "processing" && (
                             <button
                               onClick={() => updateStatus(o.id, "delivered")}
                               disabled={updating === o.id}
@@ -368,6 +387,8 @@ export default function AdminOrdersPage() {
                             <Eye size={11} />
                             View
                           </button>
+
+                          {o.customer_id && <LogFollowUpButton onClick={() => openFollowUp(o)} label="Log" />}
                         </div>
                       </td>
                     </tr>
@@ -435,7 +456,10 @@ export default function AdminOrdersPage() {
 
                     <div>
                       <p className="text-xs text-gray-400">Phone</p>
-                      <p className="font-semibold">{modal.customers.phone}</p>
+                      <p className="font-semibold" dir="ltr">{modal.customers.phone}</p>
+                      <div className="mt-1">
+                        <ContactButtons phone={modal.customers.phone} name={modal.customers.name} compact />
+                      </div>
                     </div>
 
                     <div>
@@ -545,6 +569,13 @@ export default function AdminOrdersPage() {
                 </div>
               )}
 
+              {modal.customer_id && (
+                <div className="flex justify-end">
+                  <LogFollowUpButton onClick={() => openFollowUp(modal)} />
+                </div>
+              )}
+
+              {canEdit && (
               <div>
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                   Update Status
@@ -567,10 +598,24 @@ export default function AdminOrdersPage() {
                   ))}
                 </div>
               </div>
+              )}
             </div>
           </div>
         </div>
       )}
+
+      {logging && (
+        <LogFollowUpModal
+          customer={logging.customer}
+          defaultOrderId={logging.orderId}
+          onClose={() => setLogging(null)}
+          onSaved={() => {
+            setLogging(null);
+            showToast("Follow-up saved");
+          }}
+        />
+      )}
+      {toast}
     </div>
   );
 }

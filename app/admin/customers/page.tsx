@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Search, Loader2, ChevronDown, ChevronUp, ShoppingBag } from "lucide-react";
+import { FollowUpBadge, LogFollowUpButton, LogFollowUpModal, useToast } from "@/components/admin/FollowUpUI";
 
 interface CustomerOrder {
   id: string;
@@ -19,6 +20,7 @@ interface Customer {
   email: string | null;
   address: string;
   created_at: string;
+  follow_up_status: string | null;
   orders?: CustomerOrder[];
   ordersLoaded?: boolean;
 }
@@ -36,15 +38,23 @@ export default function AdminCustomersPage() {
   const [search,    setSearch]    = useState("");
   const [expanded,  setExpanded]  = useState<string | null>(null);
   const [loadingOrders, setLO]    = useState<string | null>(null);
+  const [showInternal, setShowInternal] = useState(false);
+  const [logging, setLogging]     = useState<Customer | null>(null);
+  const { toast, showToast }      = useToast();
 
   const load = useCallback(async () => {
-    setLoad(true);
     const { data, error } = await supabase
       .from("customers")
-      .select("id, business_name, name, phone, email, address, created_at")
+      .select("id, business_name, name, phone, email, address, created_at, follow_up_status")
       .order("created_at", { ascending: false });
     if (error) console.error("Customers fetch error:", error.message);
-    setCustomers((data as Customer[]) ?? []);
+    // keep any already-loaded order history when refreshing after a follow-up
+    setCustomers((prev) =>
+      ((data as Customer[]) ?? []).map((c) => {
+        const old = prev.find((p) => p.id === c.id);
+        return old?.ordersLoaded ? { ...c, orders: old.orders, ordersLoaded: true } : c;
+      })
+    );
     setLoad(false);
   }, []);
 
@@ -67,7 +77,10 @@ export default function AdminCustomersPage() {
     setLO(null);
   }
 
-  const filtered = customers.filter((c) => {
+  const internalCount = customers.filter((c) => c.follow_up_status === "internal").length;
+  const visible = showInternal ? customers : customers.filter((c) => c.follow_up_status !== "internal");
+
+  const filtered = visible.filter((c) => {
     const q = search.toLowerCase();
     return !q || c.business_name?.toLowerCase().includes(q) || c.name?.toLowerCase().includes(q) || c.phone?.includes(q);
   });
@@ -77,14 +90,25 @@ export default function AdminCustomersPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-[#111111]">Customers</h1>
-          <p className="text-gray-400 text-sm">{customers.length} registered customers</p>
+          <p className="text-gray-400 text-sm">{visible.length} registered customers</p>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showInternal}
+            onChange={(e) => setShowInternal(e.target.checked)}
+            className="accent-[#1B4D2E]"
+          />
+          Show staff/test accounts ({internalCount})
+        </label>
         <div className="relative">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text" placeholder="Search by name or phone…" value={search} onChange={(e) => setSearch(e.target.value)}
             className="border border-gray-200 rounded-lg pl-8 pr-4 py-2 text-sm focus:outline-none focus:border-[#1B4D2E] bg-white w-56"
           />
+        </div>
         </div>
       </div>
 
@@ -98,16 +122,28 @@ export default function AdminCustomersPage() {
             {filtered.map((c) => (
               <div key={c.id}>
                 {/* Customer row */}
-                <button
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggleExpand(c.id)}
-                  className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors text-left"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleExpand(c.id);
+                    }
+                  }}
+                  className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors text-left cursor-pointer"
                 >
                   <div className="w-9 h-9 rounded-full bg-[#E8F5E9] flex items-center justify-center flex-shrink-0 text-sm font-bold text-[#1B4D2E]">
-                    {(c.business_name ?? "?")[0].toUpperCase()}
+                    {(c.business_name || "?")[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#111111] truncate">{c.business_name}</p>
-                    <p className="text-xs text-gray-400 truncate">{c.name} · {c.phone}</p>
+                    <p className="text-sm font-semibold text-[#111111] truncate" dir="auto">{c.business_name}</p>
+                    <p className="text-xs text-gray-400 truncate" dir="auto">{c.name} · {c.phone}</p>
+                  </div>
+                  <div className="flex flex-shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center">
+                    <FollowUpBadge status={c.follow_up_status} />
+                    {c.follow_up_status !== "internal" && <LogFollowUpButton onClick={() => setLogging(c)} label="Log" />}
                   </div>
                   <div className="hidden sm:block text-right flex-shrink-0">
                     <p className="text-xs text-gray-400">{c.email ?? "—"}</p>
@@ -121,7 +157,7 @@ export default function AdminCustomersPage() {
                   <div className="text-gray-300 flex-shrink-0">
                     {expanded === c.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </div>
-                </button>
+                </div>
 
                 {/* Orders expansion */}
                 {expanded === c.id && (
@@ -160,6 +196,19 @@ export default function AdminCustomersPage() {
           </div>
         )}
       </div>
+
+      {logging && (
+        <LogFollowUpModal
+          customer={logging}
+          onClose={() => setLogging(null)}
+          onSaved={() => {
+            setLogging(null);
+            showToast("Follow-up saved");
+            load();
+          }}
+        />
+      )}
+      {toast}
     </div>
   );
 }

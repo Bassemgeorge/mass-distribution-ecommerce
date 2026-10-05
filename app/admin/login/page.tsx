@@ -32,12 +32,12 @@ export default function AdminLoginPage() {
 
         if (sessionError || !session?.user) return;
 
-        const { data: isAdmin, error: adminError } = await supabase.rpc(
-          "is_admin",
+        const { data: role, error: roleError } = await supabase.rpc(
+          "my_staff_role",
         );
 
-        if (!adminError && isAdmin === true && !cancelled) {
-          router.replace("/admin");
+        if (!roleError && !cancelled && (role === "admin" || role === "sales")) {
+          router.replace(role === "sales" ? "/admin/follow-ups" : "/admin");
         }
       } catch {
         // Keep the sign-in form available if the existing session check fails.
@@ -73,23 +73,23 @@ export default function AdminLoginPage() {
         return;
       }
 
-      const { data: isAdmin, error: adminError } = await supabase.rpc(
-        "is_admin",
+      const { data: role, error: roleError } = await supabase.rpc(
+        "my_staff_role",
       );
 
-      if (adminError) {
+      if (roleError) {
         await supabase.auth.signOut();
         setError("We couldn't verify your access. Please try again.");
         return;
       }
 
-      if (isAdmin !== true) {
+      if (role !== "admin" && role !== "sales") {
         await supabase.auth.signOut();
         setError("Access denied. This account is not an admin.");
         return;
       }
 
-      router.replace("/admin");
+      router.replace(role === "sales" ? "/admin/follow-ups" : "/admin");
       router.refresh();
     } catch {
       await supabase.auth.signOut().catch(() => undefined);
