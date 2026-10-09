@@ -4,6 +4,10 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { CheckCircle, MessageCircle, ArrowRight, Package } from "lucide-react";
+import { CREDIT_PAYMENT_LABEL, CreditStatusNote, CreditStatusPill } from "@/components/CreditStatus";
+
+const CREDIT_POLL_MS = 10_000;
+const CREDIT_POLL_MAX = 12; // 2 minutes
 
 interface OrderItem {
   product_name: string;
@@ -21,6 +25,8 @@ interface Order {
   total_incl_vat: number | null;
   notes: string | null;
   created_at: string;
+  payment_method: string | null;
+  credit_status: string | null;
   customers: { name: string; business_name: string; phone: string; address: string } | null;
   order_items: OrderItem[];
 }
@@ -36,7 +42,7 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
       const { data, error: err } = await supabase
         .from("orders")
         .select(`
-          id, status, total, vat_amount, total_incl_vat, notes, created_at,
+          id, status, total, vat_amount, total_incl_vat, notes, created_at, payment_method, credit_status,
           customers ( name, business_name, phone, address ),
           order_items ( product_name, quantity, unit_price, subtotal, vat_rate )
         `)
@@ -52,6 +58,20 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
     }
     load();
   }, [id]);
+
+  // Credit orders are checked against Odoo by n8n ~30–60s after placing; poll until the decision lands
+  const awaitingCredit = order?.payment_method === "credit" && (order.credit_status ?? "checking") === "checking";
+  useEffect(() => {
+    if (!awaitingCredit) return;
+    let tries = 0;
+    const timer = window.setInterval(async () => {
+      tries += 1;
+      const { data } = await supabase.from("orders").select("status, credit_status").eq("id", id).single();
+      if (data) setOrder((prev) => (prev ? { ...prev, status: data.status, credit_status: data.credit_status } : prev));
+      if (tries >= CREDIT_POLL_MAX) window.clearInterval(timer);
+    }, CREDIT_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [awaitingCredit, id]);
 
   // Short readable order reference from UUID
   const shortId = id.split("-")[0].toUpperCase();
@@ -96,6 +116,21 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
             <p className="text-xs text-gray-400 mb-0.5">Order Reference</p>
             <p className="text-xl font-bold text-[#1B4D2E] font-mono">#{shortId}</p>
           </div>
+
+          {order.customers?.business_name && (
+            <p className="text-sm text-gray-500 mb-4">
+              For · <span dir="rtl">باسم</span>{" "}
+              <span className="font-semibold text-[#111111]" dir="auto">{order.customers.business_name}</span>
+            </p>
+          )}
+
+          {order.payment_method === "credit" && (
+            <div className="mb-5">
+              <p className="text-xs text-gray-400 mb-1.5">Payment: {CREDIT_PAYMENT_LABEL}</p>
+              <CreditStatusPill status={order.credit_status} />
+              <CreditStatusNote status={order.credit_status} />
+            </div>
+          )}
 
           <p className="text-gray-600 text-sm leading-relaxed mb-1">
             A confirmation email is on its way to you. Our team will contact you within 2 hours to confirm delivery.

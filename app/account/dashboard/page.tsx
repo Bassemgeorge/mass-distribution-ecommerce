@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useActiveCompany } from "@/context/ActiveCompanyContext";
+import CompanySwitcher from "@/components/CompanySwitcher";
+import { displayEmail } from "@/lib/identity";
 import { supabase } from "@/lib/supabase";
 import { ShoppingBag, Clock, DollarSign, CalendarDays, LogOut, ChevronRight, Loader2 } from "lucide-react";
 
@@ -24,28 +27,38 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const { user, customer, loading, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
+  const { activeCompany: customer, companies, loading: companiesLoading } = useActiveCompany();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const companyIdsKey = companies.map((c) => c.id).join(",");
 
   useEffect(() => {
     if (!loading && !user) router.replace("/account/login");
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || companiesLoading) return;
+    const ids = companyIdsKey ? companyIdsKey.split(",") : [];
+    if (ids.length === 0) {
+      setOrders([]);
+      setOrdersLoading(false);
+      return;
+    }
     supabase
       .from("orders")
       .select("id, created_at, total, status")
-      .eq("customer_id", user.id)
+      .in("customer_id", ids)
       .order("created_at", { ascending: false })
       .limit(5)
       .then(({ data }) => {
         setOrders((data as Order[]) ?? []);
         setOrdersLoading(false);
       });
-  }, [user]);
+  }, [user, companiesLoading, companyIdsKey]);
+
+  const visibleEmail = displayEmail(customer?.email) ?? displayEmail(user?.email);
 
   async function handleSignOut() {
     await signOut();
@@ -75,9 +88,14 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-gray-400 mb-1">Welcome back,</p>
-              <h1 className="text-2xl font-bold">{customer?.business_name ?? user.email}</h1>
-              {customer?.name && <p className="text-gray-400 text-sm mt-1">{customer.name}</p>}
+              <h1 className="text-2xl font-bold" dir="auto">{customer?.business_name ?? visibleEmail ?? "My Account"}</h1>
+              {customer?.name && <p className="text-gray-400 text-sm mt-1" dir="auto">{customer.name}</p>}
               <p className="text-gray-500 text-xs mt-2" dir="rtl">مرحباً بك في لوحة التحكم</p>
+              {companies.length > 1 && (
+                <div className="mt-4 max-w-xs">
+                  <CompanySwitcher dark />
+                </div>
+              )}
             </div>
             <button onClick={handleSignOut} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg">
               <LogOut size={14} /> Sign Out
@@ -158,13 +176,15 @@ export default function DashboardPage() {
               {[
                 { label: "Business Name", value: customer.business_name },
                 { label: "Contact Name", value: customer.name },
-                { label: "Email", value: customer.email ?? user.email },
+                { label: "Email", value: visibleEmail },
+                { label: "Mobile (login)", value: customer.login_phone },
                 { label: "Phone", value: customer.phone },
+                { label: "Payment terms", value: customer.is_credit ? `Credit / آجل · ${customer.credit_terms ?? ""}` : null },
                 { label: "Address / Area", value: customer.address },
               ].map(({ label, value }) => value ? (
                 <div key={label}>
                   <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                  <p className="text-[#111111] font-medium">{value}</p>
+                  <p className="text-[#111111] font-medium" dir="auto">{value}</p>
                 </div>
               ) : null)}
             </div>

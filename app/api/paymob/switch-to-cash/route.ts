@@ -28,23 +28,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    // Verify ownership
-    const { data: customer } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!customer) {
-      return NextResponse.json({ error: "Order not found." }, { status: 403 });
-    }
-
+    // Verify ownership: the order's company must belong to this login (which may own several companies)
     const { data: order } = await supabase
       .from("orders")
-      .select("id, payment_method, payment_status")
+      .select("id, payment_method, payment_status, customers!inner(user_id)")
       .eq("id", body.orderId)
-      .eq("customer_id", customer.id)
-      .single();
+      .eq("customers.user_id", user.id)
+      .maybeSingle();
 
     if (!order) {
       return NextResponse.json({ error: "Order not found." }, { status: 404 });

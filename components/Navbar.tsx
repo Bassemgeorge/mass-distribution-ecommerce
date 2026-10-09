@@ -7,10 +7,16 @@ import { useAuth } from "@/context/AuthContext";
 import { ShoppingCart, Menu, X, User, LayoutDashboard, ClipboardList, LogOut, ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useActiveCompany } from "@/context/ActiveCompanyContext";
+import CompanySwitcher from "@/components/CompanySwitcher";
+import { displayEmail } from "@/lib/identity";
 
 export default function Navbar() {
   const { count } = useCart();
-  const { user, customer, signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const { activeCompany, companies } = useActiveCompany();
+  const visibleEmail = displayEmail(user?.email);
+  const accountLabel = activeCompany?.business_name ?? visibleEmail?.split("@")[0] ?? activeCompany?.login_phone ?? "My Account";
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -91,15 +97,18 @@ export default function Navbar() {
                 className="flex items-center gap-2 bg-[#1B4D2E] text-white text-sm font-medium px-3 py-2 rounded-lg hover:bg-[#163d24] transition-colors"
               >
                 <User size={15} />
-                <span className="max-w-[120px] truncate">{customer?.business_name ?? user.email?.split("@")[0]}</span>
+                <span className="max-w-[160px] truncate" dir="auto">{accountLabel}</span>
                 <ChevronDown size={13} className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 overflow-hidden">
-                  <div className="px-3 py-2 border-b border-gray-100 mb-1">
-                    <p className="text-xs font-semibold text-[#111111] truncate">{customer?.business_name ?? "My Account"}</p>
-                    <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-gray-100 mb-1 space-y-2">
+                    <div>
+                      <p className="text-xs font-semibold text-[#111111] truncate" dir="auto">{activeCompany?.business_name ?? "My Account"}</p>
+                      <p className="text-xs text-gray-400 truncate">{visibleEmail ?? activeCompany?.login_phone ?? ""}</p>
+                    </div>
+                    <CompanySwitcher />
                   </div>
                   <Link href="/account/dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-[#111111] hover:bg-gray-50 transition-colors">
                     <LayoutDashboard size={14} className="text-[#1B4D2E]" /> Dashboard
@@ -155,6 +164,11 @@ export default function Navbar() {
 
           {user ? (
             <>
+              {companies.length > 1 && (
+                <div className="py-2.5 border-b border-white/10">
+                  <CompanySwitcher dark />
+                </div>
+              )}
               <Link href="/account/dashboard" onClick={() => setOpen(false)} className="text-white/70 hover:text-white font-medium py-2.5 border-b border-white/10 transition-colors flex items-center gap-2">
                 <LayoutDashboard size={14} /> Dashboard
               </Link>

@@ -5,7 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { looksLikePhone } from "@/lib/identity";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+
+const PHONE_ERROR = "Wrong mobile number or password / رقم الموبايل أو كلمة السر غير صحيحة";
 
 export default function LoginPage() {
   const { signIn, user, loading } = useAuth();
@@ -24,17 +28,58 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || !password) { setError("Please enter your email and password."); return; }
+    const identifier = email.trim();
+    if (!identifier || !password) { setError("Please enter your email or mobile number and password."); return; }
+
+    if (!identifier.includes("@") && !looksLikePhone(identifier)) {
+      setError("Please enter a valid email or mobile number. / برجاء إدخال إيميل أو رقم موبايل صحيح.");
+      return;
+    }
+
     setError(null);
     setSub(true);
-    const { error: err } = await signIn(email, password);
-    if (err) {
-      setError(err.includes("Invalid") ? "Incorrect email or password." : err);
-      setSub(false);
-    } else {
+
+    if (identifier.includes("@")) {
+      const { error: err } = await signIn(identifier, password);
+      if (err) {
+        setError(err.includes("Invalid") ? "Incorrect email or password." : err);
+        setSub(false);
+      } else {
+        router.push("/account/dashboard");
+      }
+      return;
+    }
+
+    // Mobile number: the server resolves the account and returns a session
+    try {
+      const res = await fetch("/api/auth/phone-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: identifier, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.access_token) {
+        setError(data.error ?? PHONE_ERROR);
+        setSub(false);
+        return;
+      }
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+      if (sessionError) {
+        setError(PHONE_ERROR);
+        setSub(false);
+        return;
+      }
       router.push("/account/dashboard");
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setSub(false);
     }
   }
+
+  const phoneInput = looksLikePhone(email.trim());
 
   const inp = "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#1B4D2E] transition-colors bg-white";
 
@@ -60,10 +105,13 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Email address</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                Email or mobile number · <span dir="rtl">الإيميل أو رقم الموبايل</span>
+              </label>
               <input
-                type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                className={inp} placeholder="ahmed@restaurant.eg" autoComplete="email"
+                type="text" inputMode={phoneInput ? "tel" : "email"} value={email} onChange={(e) => setEmail(e.target.value)}
+                className={inp} placeholder="ahmed@restaurant.eg / 010xxxxxxxx" autoComplete="username"
+                autoCapitalize="none" spellCheck={false}
               />
             </div>
             <div>
@@ -79,11 +127,24 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex justify-end">
-              <Link href="/account/forgot-password" className="text-xs text-[#1B4D2E] hover:underline">
-                Forgot password?
-              </Link>
-            </div>
+            {phoneInput ? (
+              <div className="text-xs text-gray-500 bg-[#F7F7F5] rounded-lg px-3 py-2.5 leading-relaxed">
+                <p>
+                  Forgot your password? Contact us on{" "}
+                  <a href="https://wa.me/201288895916" target="_blank" rel="noopener noreferrer" className="text-[#1B4D2E] font-semibold hover:underline">
+                    WhatsApp <span dir="ltr">+20 128 889 5916</span>
+                  </a>{" "}
+                  and we&apos;ll send you a new link.
+                </p>
+                <p dir="rtl" className="mt-1">نسيت كلمة السر؟ كلمنا واتساب وهنبعتلك لينك جديد.</p>
+              </div>
+            ) : (
+              <div className="flex justify-end">
+                <Link href="/account/forgot-password" className="text-xs text-[#1B4D2E] hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+            )}
 
             <button
               type="submit" disabled={submitting}

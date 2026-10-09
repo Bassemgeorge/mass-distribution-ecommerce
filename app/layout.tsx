@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { CartProvider } from "@/lib/cartStore";
 import { AuthProvider } from "@/context/AuthContext";
+import { ActiveCompanyProvider } from "@/context/ActiveCompanyContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Analytics } from "@vercel/analytics/next";
@@ -24,11 +25,13 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <body className="min-h-full flex flex-col bg-white text-[#111111] font-sans">
         <AuthProvider>
-          <CartProvider>
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </CartProvider>
+          <ActiveCompanyProvider>
+            <CartProvider>
+              <Navbar />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </CartProvider>
+          </ActiveCompanyProvider>
         </AuthProvider>
         <Analytics />
       </body>

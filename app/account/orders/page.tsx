@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useActiveCompany } from "@/context/ActiveCompanyContext";
 import { supabase } from "@/lib/supabase";
 import { ShoppingBag, ChevronDown, ChevronUp, Loader2, ArrowLeft } from "lucide-react";
+import { CREDIT_PAYMENT_LABEL, CreditStatusNote, CreditStatusPill } from "@/components/CreditStatus";
 
 interface OrderItem {
   id: string;
@@ -21,6 +23,9 @@ interface Order {
   total: number;
   status: string;
   notes?: string;
+  customer_id: string;
+  payment_method: string | null;
+  credit_status: string | null;
   order_items?: OrderItem[];
 }
 
@@ -36,12 +41,18 @@ const ALL_STATUSES = ["All", "pending", "confirmed", "processing", "delivered", 
 
 export default function OrdersPage() {
   const { user, loading } = useAuth();
+  const { companies, loading: companiesLoading } = useActiveCompany();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filter, setFilter] = useState("All");
+  const [companyFilter, setCompanyFilter] = useState("All");
   const [loadingItems, setLoadingItems] = useState<string | null>(null);
+
+  const multiCompany = companies.length > 1;
+  const companyName = (id: string) => companies.find((c) => c.id === id)?.business_name ?? "—";
+  const companyIdsKey = companies.map((c) => c.id).join(",");
 
   useEffect(() => {
     if (!loading && !user) router.replace("/account/login");
@@ -49,33 +60,24 @@ export default function OrdersPage() {
 
   useEffect(() => {
     async function fetchOrders() {
-      if (!user) return;
+      if (!user || companiesLoading) return;
 
       setOrdersLoading(true);
 
       try {
-        // Get the customer linked to the logged-in user
-        const { data: customer, error: customerError } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (customerError) {
-          throw customerError;
-        }
+        const companyIds = companyIdsKey ? companyIdsKey.split(",") : [];
 
         // The logged-in user does not have a customer record yet
-        if (!customer) {
+        if (companyIds.length === 0) {
           setOrders([]);
           return;
         }
 
-        // Get only this customer's orders
+        // Orders for every company on this login (group buyers can have several)
         const { data: ordersData, error: ordersError } = await supabase
           .from("orders")
-          .select("id, created_at, total, status, notes")
-          .eq("customer_id", customer.id)
+          .select("id, created_at, total, status, notes, customer_id, payment_method, credit_status")
+          .in("customer_id", companyIds)
           .order("created_at", { ascending: false });
 
         if (ordersError) {
@@ -92,7 +94,7 @@ export default function OrdersPage() {
     }
 
     fetchOrders();
-  }, [user]);
+  }, [user, companiesLoading, companyIdsKey]);
 
   async function toggleExpand(orderId: string) {
     if (expanded === orderId) { setExpanded(null); return; }
@@ -120,7 +122,9 @@ export default function OrdersPage() {
     );
   }
 
-  const filtered = filter === "All" ? orders : orders.filter((o) => o.status === filter);
+  const filtered = orders.filter(
+    (o) => (filter === "All" || o.status === filter) && (companyFilter === "All" || o.customer_id === companyFilter)
+  );
 
   return (
     <div className="min-h-screen bg-[#F7F7F5]">
@@ -135,6 +139,27 @@ export default function OrdersPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        {multiCompany && (
+          <label className="block max-w-sm">
+            <span className="block text-xs font-medium text-gray-500 mb-1.5">
+              Company · <span dir="rtl">الشركة</span>
+            </span>
+            <select
+              value={companyFilter}
+              onChange={(e) => setCompanyFilter(e.target.value)}
+              dir="auto"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#1B4D2E]"
+            >
+              <option value="All">All companies / كل الشركات</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.business_name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         {/* Filter */}
         <div className="flex gap-2 overflow-x-auto pb-1">
           {ALL_STATUSES.map((s) => (
@@ -174,16 +199,26 @@ export default function OrdersPage() {
                   onClick={() => toggleExpand(order.id)}
                   className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors text-left"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 min-w-0">
                     <div>
                       <p className="text-sm font-semibold text-[#111111]">#{order.id.slice(0, 8).toUpperCase()}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {new Date(order.created_at).toLocaleDateString("en-EG", { day: "numeric", month: "short", year: "numeric" })}
                       </p>
                     </div>
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_COLORS[order.status] ?? "bg-gray-50 text-gray-600 border-gray-200"}`}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </span>
+                    {multiCompany && (
+                      <div className="min-w-0 max-w-[14rem]">
+                        <p className="text-[11px] text-gray-400">Company</p>
+                        <p className="text-xs font-medium text-[#111111] truncate" dir="auto">{companyName(order.customer_id)}</p>
+                      </div>
+                    )}
+                    {order.payment_method === "credit" ? (
+                      <CreditStatusPill status={order.credit_status} />
+                    ) : (
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_COLORS[order.status] ?? "bg-gray-50 text-gray-600 border-gray-200"}`}>
+                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-sm font-bold text-[#111111]">EGP {(order.total ?? 0).toLocaleString()}</span>
@@ -200,6 +235,12 @@ export default function OrdersPage() {
                       </div>
                     ) : (
                       <div className="px-6 py-4">
+                        {order.payment_method === "credit" && (
+                          <div className="mb-3">
+                            <p className="text-xs text-gray-500">Payment: {CREDIT_PAYMENT_LABEL}</p>
+                            <CreditStatusNote status={order.credit_status} />
+                          </div>
+                        )}
                         {order.order_items && order.order_items.length > 0 ? (
                           <table className="w-full text-sm">
                             <thead>

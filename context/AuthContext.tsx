@@ -12,74 +12,37 @@ import {
 } from "@/lib/auth";
 import type { User, Session } from "@supabase/supabase-js";
 
-export interface CustomerProfile {
-  id: string;
-  name: string;
-  business_name: string;
-  phone: string;
-  email: string;
-  address: string;
-  created_at: string;
-}
-
+// Company/customer rows for the logged-in user live in ActiveCompanyContext (a login can own several).
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  customer: CustomerProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   signUp: (data: SignUpData) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
-  refreshCustomer: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-async function fetchCustomerProfile(userId: string): Promise<CustomerProfile | null> {
-  const { data } = await supabase
-    .from("customers")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return data as CustomerProfile | null;
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,     setUser]     = useState<User | null>(null);
   const [session,  setSession]  = useState<Session | null>(null);
-  const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [loading,  setLoading]  = useState(true);
-
-  async function refreshCustomer() {
-    if (!user) { setCustomer(null); return; }
-    const profile = await fetchCustomerProfile(user.id);
-    setCustomer(profile);
-  }
 
   useEffect(() => {
     // Initial session check
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       setUser(s?.user ?? null);
-      if (s?.user) {
-        const profile = await fetchCustomerProfile(s.user.id);
-        setCustomer(profile);
-      }
       setLoading(false);
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
-      if (s?.user) {
-        const profile = await fetchCustomerProfile(s.user.id);
-        setCustomer(profile);
-      } else {
-        setCustomer(null);
-      }
       setLoading(false);
     });
 
@@ -95,7 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authSignOut();
     setUser(null);
     setSession(null);
-    setCustomer(null);
   }
 
   async function signUp(data: SignUpData) {
@@ -114,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, customer, loading, signIn, signOut, signUp, resetPassword, updatePassword, refreshCustomer }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signOut, signUp, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

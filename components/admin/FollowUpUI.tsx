@@ -10,12 +10,14 @@ import {
   FollowUpChannel,
   cairoDate,
   formatDate,
+  normalizeEgyptPhone,
   orderTotalInclVat,
   telLink,
   timeAgo,
   whatsappLink,
 } from "@/lib/followups";
-import { CheckCircle, ClipboardList, Loader2, MessageCircle, Phone, X } from "lucide-react";
+import { displayEmail } from "@/lib/identity";
+import { AlertCircle, CheckCircle, ClipboardList, KeyRound, Loader2, MessageCircle, Phone, X } from "lucide-react";
 
 // ── Badge ────────────────────────────────────────────────────────────────────
 export function FollowUpBadge({ status }: { status: string | null | undefined }) {
@@ -56,21 +58,131 @@ export function ContactButtons({ phone, name, compact = false }: { phone: string
 
 // ── Toast ────────────────────────────────────────────────────────────────────
 export function useToast() {
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
   useEffect(() => {
     if (!message) return;
-    const t = window.setTimeout(() => setMessage(null), 3000);
+    const t = window.setTimeout(() => setMessage(null), message.error ? 5000 : 3000);
     return () => window.clearTimeout(t);
   }, [message]);
 
   const toast = message ? (
-    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-2 bg-[#111111] text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg">
-      <CheckCircle size={15} className="text-[#3AE18B]" /> {message}
+    <div
+      className={`fixed bottom-5 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg ${
+        message.error ? "bg-red-600" : "bg-[#111111]"
+      }`}
+    >
+      {message.error ? <AlertCircle size={15} /> : <CheckCircle size={15} className="text-[#3AE18B]" />} {message.text}
     </div>
   ) : null;
 
-  return { toast, showToast: setMessage };
+  const showToast = useCallback((text: string, opts?: { error?: boolean }) => setMessage({ text, error: !!opts?.error }), []);
+
+  return { toast, showToast };
+}
+
+// ── Credit badge + WhatsApp setup link ──────────────────────────────────────
+export function CreditBadge({ terms }: { terms: string | null | undefined }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded-full border bg-[#1B4D2E]/5 text-[#1B4D2E] border-[#1B4D2E]/25"
+      title={terms ?? undefined}
+    >
+      Credit{terms ? <span className="font-normal text-[#1B4D2E]/80 max-w-[12rem] truncate">· {terms}</span> : null}
+    </span>
+  );
+}
+
+export interface SetupLinkTarget {
+  id: string;
+  user_id: string | null;
+  name: string | null;
+  login_phone: string | null;
+  phone: string | null;
+}
+
+export function SetupLinkButton({
+  customer,
+  onDone,
+  onError,
+}: {
+  customer: SetupLinkTarget;
+  onDone: () => void;
+  onError: (message: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const number = normalizeEgyptPhone(customer.login_phone ?? customer.phone);
+
+  async function send(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!customer.user_id) return onError("This customer has no login account yet.");
+    if (!number) return onError("No mobile number on file for this customer.");
+
+    // Open the tab during the click so popup blockers allow it; fill in the URL once the link exists
+    const win = window.open("", "_blank");
+    setBusy(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/setup-link", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionData.session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ customer_id: customer.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.link) throw new Error(data.error ?? "Couldn't create the setup link.");
+
+      // One login can own several companies; one link covers all of them
+      const { data: siblings } = await supabase
+        .from("customers")
+        .select("id, business_name")
+        .eq("user_id", customer.user_id)
+        .order("business_name");
+      const companies = (siblings as { id: string; business_name: string | null }[] | null) ?? [];
+
+      let message =
+        `أهلاً ${(customer.name ?? "").trim()}، ده لينك تفعيل حسابك على موقع Mass Distribution massdistributioneg.com — ` +
+        "اضغط عليه واختار كلمة السر، وبعد كده تقدر تدخل برقم موبايلك وتطلب آجل على نفس شروط الدفع بتاعتك: " +
+        data.link;
+      if (companies.length > 1) {
+        message += `\n\nالحساب ده لكل الشركات دي:\n${companies.map((c) => `• ${c.business_name ?? ""}`).join("\n")}`;
+      }
+
+      const waUrl = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+      if (win) win.location.href = waUrl;
+      else window.open(waUrl, "_blank");
+
+      const { data: userData } = await supabase.auth.getUser();
+      const ids = companies.length > 0 ? companies.map((c) => c.id) : [customer.id];
+      await supabase.from("customer_followups").insert(
+        ids.map((id) => ({
+          customer_id: id,
+          status: "contacted",
+          channel: "whatsapp",
+          note: "Sent account setup link",
+          created_by: userData.user?.id,
+        }))
+      );
+      onDone();
+    } catch (err) {
+      win?.close();
+      onError(err instanceof Error ? err.message : "Couldn't send the setup link.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button
+      onClick={send}
+      disabled={busy}
+      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#25D366]/10 text-[#128C4A] hover:bg-[#25D366]/20 transition-colors whitespace-nowrap disabled:opacity-60"
+    >
+      {busy ? <Loader2 size={13} className="animate-spin" /> : <KeyRound size={13} />} Send setup link (WhatsApp)
+    </button>
+  );
 }
 
 // ── Log follow-up modal ──────────────────────────────────────────────────────
@@ -271,6 +383,10 @@ interface DrawerCustomer {
   created_at: string;
   follow_up_status: string | null;
   next_follow_up_date: string | null;
+  user_id: string | null;
+  login_phone: string | null;
+  is_credit: boolean | null;
+  credit_terms: string | null;
 }
 
 interface DrawerOrder extends OrderOption {
@@ -308,7 +424,9 @@ export function CustomerDrawer({
     const [c, o, h] = await Promise.all([
       supabase
         .from("customers")
-        .select("id, business_name, name, phone, email, address, created_at, follow_up_status, next_follow_up_date")
+        .select(
+          "id, business_name, name, phone, email, address, created_at, follow_up_status, next_follow_up_date, user_id, login_phone, is_credit, credit_terms"
+        )
         .eq("id", customerId)
         .single(),
       supabase
@@ -342,8 +460,9 @@ export function CustomerDrawer({
               {customer?.business_name ?? "Customer"}
             </h2>
             {customer && (
-              <div className="mt-1">
+              <div className="mt-1 flex flex-wrap gap-1.5">
                 <FollowUpBadge status={customer.follow_up_status} />
+                {customer.is_credit && <CreditBadge terms={customer.credit_terms} />}
               </div>
             )}
           </div>
@@ -361,7 +480,8 @@ export function CustomerDrawer({
             <section className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
               <Detail label="Contact" value={customer.name} />
               <Detail label="Phone" value={customer.phone} />
-              <Detail label="Email" value={customer.email} />
+              {customer.login_phone && <Detail label="Login mobile" value={customer.login_phone} />}
+              <Detail label="Email" value={displayEmail(customer.email)} />
               <Detail label="Address" value={customer.address} />
               <Detail label="Registered" value={`${formatDate(customer.created_at)} (${timeAgo(customer.created_at)})`} />
               {customer.follow_up_status === "call_back" && customer.next_follow_up_date && (
@@ -370,6 +490,17 @@ export function CustomerDrawer({
               <div className="flex flex-wrap gap-2 pt-2">
                 <ContactButtons phone={customer.phone} name={customer.name} />
                 <LogFollowUpButton onClick={() => setLogging(true)} />
+                {customer.is_credit && (
+                  <SetupLinkButton
+                    customer={customer}
+                    onDone={() => {
+                      showToast("Setup link opened in WhatsApp and logged");
+                      load();
+                      onChanged();
+                    }}
+                    onError={(msg) => showToast(msg, { error: true })}
+                  />
+                )}
               </div>
             </section>
 

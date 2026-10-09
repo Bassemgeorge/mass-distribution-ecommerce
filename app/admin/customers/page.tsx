@@ -3,7 +3,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Search, Loader2, ChevronDown, ChevronUp, ShoppingBag } from "lucide-react";
-import { FollowUpBadge, LogFollowUpButton, LogFollowUpModal, useToast } from "@/components/admin/FollowUpUI";
+import {
+  CreditBadge,
+  FollowUpBadge,
+  LogFollowUpButton,
+  LogFollowUpModal,
+  SetupLinkButton,
+  useToast,
+} from "@/components/admin/FollowUpUI";
+import { displayEmail } from "@/lib/identity";
 
 interface CustomerOrder {
   id: string;
@@ -21,6 +29,10 @@ interface Customer {
   address: string;
   created_at: string;
   follow_up_status: string | null;
+  user_id: string | null;
+  login_phone: string | null;
+  is_credit: boolean | null;
+  credit_terms: string | null;
   orders?: CustomerOrder[];
   ordersLoaded?: boolean;
 }
@@ -39,13 +51,14 @@ export default function AdminCustomersPage() {
   const [expanded,  setExpanded]  = useState<string | null>(null);
   const [loadingOrders, setLO]    = useState<string | null>(null);
   const [showInternal, setShowInternal] = useState(false);
+  const [creditOnly, setCreditOnly] = useState(false);
   const [logging, setLogging]     = useState<Customer | null>(null);
   const { toast, showToast }      = useToast();
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
       .from("customers")
-      .select("id, business_name, name, phone, email, address, created_at, follow_up_status")
+      .select("id, business_name, name, phone, email, address, created_at, follow_up_status, user_id, login_phone, is_credit, credit_terms")
       .order("created_at", { ascending: false });
     if (error) console.error("Customers fetch error:", error.message);
     // keep any already-loaded order history when refreshing after a follow-up
@@ -78,11 +91,20 @@ export default function AdminCustomersPage() {
   }
 
   const internalCount = customers.filter((c) => c.follow_up_status === "internal").length;
-  const visible = showInternal ? customers : customers.filter((c) => c.follow_up_status !== "internal");
+  const visible = customers.filter(
+    (c) => (showInternal || c.follow_up_status !== "internal") && (!creditOnly || c.is_credit)
+  );
+  const creditCount = customers.filter((c) => c.is_credit).length;
 
   const filtered = visible.filter((c) => {
     const q = search.toLowerCase();
-    return !q || c.business_name?.toLowerCase().includes(q) || c.name?.toLowerCase().includes(q) || c.phone?.includes(q);
+    return (
+      !q ||
+      c.business_name?.toLowerCase().includes(q) ||
+      c.name?.toLowerCase().includes(q) ||
+      c.phone?.includes(q) ||
+      c.login_phone?.includes(q)
+    );
   });
 
   return (
@@ -101,6 +123,15 @@ export default function AdminCustomersPage() {
             className="accent-[#1B4D2E]"
           />
           Show staff/test accounts ({internalCount})
+        </label>
+        <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={creditOnly}
+            onChange={(e) => setCreditOnly(e.target.checked)}
+            className="accent-[#1B4D2E]"
+          />
+          Credit customers only ({creditCount})
         </label>
         <div className="relative">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -138,15 +169,33 @@ export default function AdminCustomersPage() {
                     {(c.business_name || "?")[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#111111] truncate" dir="auto">{c.business_name}</p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="text-sm font-semibold text-[#111111] truncate" dir="auto">{c.business_name}</p>
+                      {c.is_credit && <CreditBadge terms={c.credit_terms} />}
+                    </div>
                     <p className="text-xs text-gray-400 truncate" dir="auto">{c.name} · {c.phone}</p>
+                    {c.login_phone && (
+                      <p className="text-xs text-gray-400 truncate">
+                        Login mobile: <span dir="ltr">{c.login_phone}</span>
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center">
                     <FollowUpBadge status={c.follow_up_status} />
                     {c.follow_up_status !== "internal" && <LogFollowUpButton onClick={() => setLogging(c)} label="Log" />}
+                    {c.is_credit && (
+                      <SetupLinkButton
+                        customer={c}
+                        onDone={() => {
+                          showToast("Setup link opened in WhatsApp and logged");
+                          load();
+                        }}
+                        onError={(msg) => showToast(msg, { error: true })}
+                      />
+                    )}
                   </div>
                   <div className="hidden sm:block text-right flex-shrink-0">
-                    <p className="text-xs text-gray-400">{c.email ?? "—"}</p>
+                    <p className="text-xs text-gray-400">{displayEmail(c.email) ?? "—"}</p>
                     <p className="text-xs text-gray-300">{c.address}</p>
                   </div>
                   <div className="text-right flex-shrink-0 ml-4">

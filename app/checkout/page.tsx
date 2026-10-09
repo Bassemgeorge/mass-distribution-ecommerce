@@ -3,6 +3,7 @@
 import { useState, Suspense, useEffect } from "react";
 import { useCart } from "@/lib/cartStore";
 import { useAuth } from "@/context/AuthContext";
+import { useActiveCompany } from "@/context/ActiveCompanyContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -30,7 +31,8 @@ const emptyForm: FormState = {
 
 function CheckoutContent() {
   const { items, total, count, clear, vatTotal, totalInclVat } = useCart();
-  const { user, customer } = useAuth();
+  const { user } = useAuth();
+  const { companies, activeCompany, setActiveCompanyId } = useActiveCompany();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -38,23 +40,28 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Pre-fill from auth profile
-  // Pre-fill from auth profile
+  // Group buyers (2+ companies on one login) must explicitly pick the company for this order
+  const multiCompany = companies.length > 1;
+  const [chosenCompanyId, setChosenCompanyId] = useState("");
+  const company = multiCompany ? (companies.find((c) => c.id === chosenCompanyId) ?? null) : activeCompany;
+
+  // Pre-fill from the ordering company; credit companies default to the Credit option
 useEffect(() => {
-  if (!customer) return;
+  if (!company) return;
 
   const timer = window.setTimeout(() => {
     setForm((f) => ({
       ...f,
-      businessName: customer.business_name ?? f.businessName,
-      contactName: customer.name ?? f.contactName,
-      phone: customer.phone ?? f.phone,
-      address: customer.address ?? f.address,
+      businessName: company.business_name ?? f.businessName,
+      contactName: company.name ?? f.contactName,
+      phone: company.phone ?? f.phone,
+      address: company.address ?? f.address,
+      paymentMethod: company.is_credit ? "credit" : f.paymentMethod === "credit" ? "cash" : f.paymentMethod,
     }));
   }, 0);
 
   return () => window.clearTimeout(timer);
-}, [customer]);
+}, [company]);
 
   function set(field: keyof FormState, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -66,8 +73,18 @@ useEffect(() => {
     return;
   }
 
+  if (multiCompany && !company) {
+    setError("Please choose which company this order is for. / برجاء اختيار الشركة.");
+    return;
+  }
+
   if (!form.businessName || !form.contactName || !form.phone || !form.address) {
     setError("Please fill in all required fields.");
+    return;
+  }
+
+  if (form.paymentMethod === "credit" && !company?.is_credit) {
+    setError("Credit is not available for this company. Please choose another payment method.");
     return;
   }
 
@@ -75,19 +92,11 @@ useEffect(() => {
   setLoading(true);
 
   try {
-    // 1 — resolve customer ID
+    // 1 — resolve customer ID (the ordering company for logged-in users)
     let customerId: string;
 
     if (user) {
-      const { data: existingCustomer, error: findCustomerError } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (findCustomerError) throw new Error(findCustomerError.message);
-
-      if (existingCustomer) {
+      if (company) {
         const { error: updateCustomerError } = await supabase
           .from("customers")
           .update({
@@ -96,10 +105,10 @@ useEffect(() => {
             phone: form.phone,
             address: `${form.address}, ${form.area}`,
           })
-          .eq("id", existingCustomer.id);
+          .eq("id", company.id);
 
         if (updateCustomerError) throw new Error(updateCustomerError.message);
-        customerId = existingCustomer.id;
+        customerId = company.id;
       } else {
         const { data: newCustomer, error: custErr } = await supabase
           .from("customers")
@@ -142,6 +151,7 @@ useEffect(() => {
         status: "pending",
         total,
         payment_method: form.paymentMethod,
+        // for credit the database also forces payment_status = 'unpaid' and credit_status = 'checking'
         payment_status: form.paymentMethod === "paymob" ? "pending" : "unpaid",
         notes: [form.notes, `Payment: ${form.paymentMethod}`].filter(Boolean).join(" | ") || null,
       })
@@ -193,7 +203,7 @@ useEffect(() => {
       return;
     }
 
-    // 5 — cash / bank transfer normal flow
+    // 5 — cash / credit: normal flow (credit is checked against Odoo in the background)
     clear();
     router.push(`/order-confirmation/${order.id}`);
   } catch (err: unknown) {
@@ -253,6 +263,32 @@ useEffect(() => {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
           {/* ── Form ─────────────────────────────────────────────────────── */}
           <div className="lg:col-span-3 space-y-8">
+            {/* Company choice — required for logins with several companies */}
+            {multiCompany && (
+              <section>
+                <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">
+                  Choose company · <span dir="rtl">اختار الشركة</span>
+                </h2>
+                <label className={lbl}>Which company is this order for? {req}</label>
+                <select
+                  value={chosenCompanyId}
+                  onChange={(e) => {
+                    setChosenCompanyId(e.target.value);
+                    if (e.target.value) setActiveCompanyId(e.target.value);
+                  }}
+                  dir="auto"
+                  className={`${inp} ${!company ? "border-amber-300 bg-amber-50/40" : ""}`}
+                >
+                  <option value="">Choose company… / اختار الشركة…</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.business_name}
+                    </option>
+                  ))}
+                </select>
+              </section>
+            )}
+
             {/* Business & Contact */}
             <section>
               <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">Business Details</h2>
@@ -298,6 +334,17 @@ useEffect(() => {
               <h2 className="text-sm font-semibold text-[#111111] uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">Payment Method</h2>
               <div className="space-y-2">
                 {[
+                  ...(company?.is_credit
+                    ? [
+                        {
+                          value: "credit",
+                          label: "Credit (on account) / آجل",
+                          desc: company.credit_terms
+                            ? `Billed on your payment terms: ${company.credit_terms} / حسب شروط الدفع: ${company.credit_terms}`
+                            : "Billed on your agreed payment terms / حسب شروط الدفع المتفق عليها",
+                        },
+                      ]
+                    : []),
                   { value: "cash", label: "Cash on Delivery", desc: "Pay in cash when your order arrives." },
                  { value: "paymob", label: "Pay Online — Card, Mobile Wallet or Apple Pay", desc: "Secure payment by Paymob. Visa, Mastercard, Meeza, Vodafone Cash & other wallets, Apple Pay." },
                     ].map(({ value, label, desc }) => (
@@ -336,7 +383,7 @@ useEffect(() => {
               ) : total < MIN_ORDER_TOTAL ? (
                 `Minimum order EGP ${MIN_ORDER_TOTAL.toLocaleString()}`
               ) : (
-                form.paymentMethod === "paymob" ? "Pay Online" : "Place Order"
+                form.paymentMethod === "paymob" ? "Pay Online" : form.paymentMethod === "credit" ? "Place Order on Credit" : "Place Order"
               )}
             </button>
             <p className="text-xs text-gray-400 text-center -mt-4">By placing this order you agree to our terms of service.</p>
@@ -346,6 +393,16 @@ useEffect(() => {
           <div className="lg:col-span-2">
             <div className="bg-[#F7F7F5] rounded-xl p-5 border border-gray-200 sticky top-24">
               <h2 className="text-sm font-bold text-[#111111] uppercase tracking-wider mb-4">Order Summary</h2>
+              {user && (multiCompany || company) && (
+                <div className="mb-4 rounded-lg border border-gray-200 bg-white px-3 py-2">
+                  <p className="text-[11px] text-gray-400">
+                    Ordering for · <span dir="rtl">الطلب باسم</span>
+                  </p>
+                  <p className={`text-sm font-semibold ${company ? "text-[#111111]" : "text-amber-700"}`} dir="auto">
+                    {company?.business_name ?? "Choose a company first / اختار الشركة الأول"}
+                  </p>
+                </div>
+              )}
               <div className="space-y-2 mb-4 max-h-72 overflow-y-auto">
                 {items.map(({ product, quantity }) => (
                   <div key={product.id} className="flex justify-between text-xs">

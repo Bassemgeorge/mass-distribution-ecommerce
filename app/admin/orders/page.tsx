@@ -55,6 +55,10 @@ interface AdminOrder {
   payment_method: string | null;
   payment_status: string | null;
   paymob_transaction_id: string | null;
+  credit_status: string | null;
+  credit_check: { reason?: string; credit_limit?: number; owed_after?: number } | null;
+  credit_decided_by: string | null;
+  odoo_order_name: string | null;
   customers: {
     business_name: string;
     name: string;
@@ -85,8 +89,25 @@ function getPaymentMethodLabel(method: string | null | undefined) {
 
   if (normalized === "paymob") return "Paymob";
   if (normalized === "cash") return "Cash";
+  if (normalized === "credit") return "Credit (on account)";
 
   return formatLabel(method);
+}
+
+const CREDIT_BADGES: Record<string, { label: string; className: string }> = {
+  checking: { label: "Credit: Checking", className: "bg-gray-50 text-gray-600 border-gray-200" },
+  approved: { label: "Credit: Approved", className: "bg-[#177A41]/10 text-[#177A41] border-[#177A41]/30" },
+  held: { label: "Credit: Awaiting approval", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  rejected: { label: "Credit: Rejected", className: "bg-red-50 text-red-700 border-red-200" },
+};
+
+function CreditBadge({ status }: { status: string | null }) {
+  const badge = CREDIT_BADGES[status ?? "checking"] ?? CREDIT_BADGES.checking;
+  return (
+    <span className={`w-fit whitespace-nowrap text-xs font-medium px-2 py-1 rounded-full border ${badge.className}`}>
+      {badge.label}
+    </span>
+  );
 }
 
 export default function AdminOrdersPage() {
@@ -116,7 +137,7 @@ export default function AdminOrdersPage() {
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id, created_at, total, status, notes, customer_id, payment_method, payment_status, paymob_transaction_id, customers(business_name, name, phone, address)"
+        "id, created_at, total, status, notes, customer_id, payment_method, payment_status, paymob_transaction_id, credit_status, credit_check, credit_decided_by, odoo_order_name, customers(business_name, name, phone, address)"
       )
       .order("created_at", { ascending: false });
 
@@ -314,13 +335,22 @@ export default function AdminOrdersPage() {
                             {getPaymentMethodLabel(o.payment_method)}
                           </span>
 
-                          <span
-                            className={`w-fit text-xs font-medium px-2 py-1 rounded-full border ${
-                              PAYMENT_COLORS[paymentStatus] ?? PAYMENT_COLORS.unpaid
-                            }`}
-                          >
-                            {formatLabel(paymentStatus)}
-                          </span>
+                          {o.payment_method === "credit" ? (
+                            <>
+                              <CreditBadge status={o.credit_status} />
+                              {o.odoo_order_name && (
+                                <span className="text-xs font-mono text-gray-500">Odoo {o.odoo_order_name}</span>
+                              )}
+                            </>
+                          ) : (
+                            <span
+                              className={`w-fit text-xs font-medium px-2 py-1 rounded-full border ${
+                                PAYMENT_COLORS[paymentStatus] ?? PAYMENT_COLORS.unpaid
+                              }`}
+                            >
+                              {formatLabel(paymentStatus)}
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -500,6 +530,45 @@ export default function AdminOrdersPage() {
                       <p className="font-mono text-xs text-[#111111] break-all">
                         {modal.paymob_transaction_id}
                       </p>
+                    </div>
+                  )}
+
+                  {modal.payment_method === "credit" && (
+                    <div className="col-span-2 border-t border-[#1B4D2E]/10 pt-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500">Credit</p>
+                        <CreditBadge status={modal.credit_status} />
+                      </div>
+                      {modal.odoo_order_name && (
+                        <div>
+                          <p className="text-xs text-gray-500">Odoo quotation</p>
+                          <p className="font-mono text-xs font-semibold text-[#111111]">{modal.odoo_order_name}</p>
+                        </div>
+                      )}
+                      {modal.credit_check?.reason && (
+                        <div className="col-span-2">
+                          <p className="text-xs text-gray-500">Reason</p>
+                          <p className="text-sm text-[#111111]">{modal.credit_check.reason}</p>
+                        </div>
+                      )}
+                      {canEdit && modal.credit_check?.credit_limit != null && (
+                        <div>
+                          <p className="text-xs text-gray-500">Credit limit</p>
+                          <p className="font-semibold">{formatMoney(modal.credit_check.credit_limit)}</p>
+                        </div>
+                      )}
+                      {canEdit && modal.credit_check?.owed_after != null && (
+                        <div>
+                          <p className="text-xs text-gray-500">Owed after this order</p>
+                          <p className="font-semibold">{formatMoney(modal.credit_check.owed_after)}</p>
+                        </div>
+                      )}
+                      {canEdit && modal.credit_decided_by && (
+                        <div className="col-span-2">
+                          <p className="text-xs text-gray-500">Decided by</p>
+                          <p className="text-sm text-[#111111]">{modal.credit_decided_by}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

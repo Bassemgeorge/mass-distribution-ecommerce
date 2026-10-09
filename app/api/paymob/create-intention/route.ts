@@ -37,23 +37,13 @@ export async function POST(request: Request) {
     if (token) {
       const { data: { user } } = await supabase.auth.getUser(token);
       if (user) {
-        // Verify the order's customer belongs to this user
-        const { data: customer } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("user_id", user.id)
-          .single();
-
-        if (!customer) {
-          return NextResponse.json({ error: "Order not found for this account." }, { status: 403 });
-        }
-
+        // Verify the order's company belongs to this login (a login can own several companies)
         const { data: ownership } = await supabase
           .from("orders")
-          .select("id")
+          .select("id, customers!inner(user_id)")
           .eq("id", orderId)
-          .eq("customer_id", customer.id)
-          .single();
+          .eq("customers.user_id", user.id)
+          .maybeSingle();
 
         if (!ownership) {
           return NextResponse.json({ error: "Order not found for this account." }, { status: 403 });
