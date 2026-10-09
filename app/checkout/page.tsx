@@ -21,6 +21,26 @@ type FormState = {
 
 const AREAS = ["Cairo", "Giza", "Alexandria", "New Cairo", "Sheikh Zayed", "6th of October", "Sharm El Sheikh", "Hurghada", "Mansoura", "Other"];
 
+// customers.address is stored as "street, area". Split it back for pre-filling, dropping any area suffixes
+// that older checkouts appended repeatedly ("street, Cairo, Cairo, Cairo" → street "street", area "Cairo").
+function splitAddress(saved: string | null | undefined): { street: string; area: string | null } {
+  let street = (saved ?? "").trim();
+  if (AREAS.includes(street)) return { street: "", area: street };
+  let area: string | null = null;
+  for (;;) {
+    const m = street.match(/^(.*\S)\s*,\s*([^,]+)$/);
+    if (!m || !AREAS.includes(m[2].trim())) break;
+    area ??= m[2].trim(); // the last segment is the most recently chosen area
+    street = m[1].trim();
+  }
+  return { street, area };
+}
+
+function joinAddress(street: string, area: string) {
+  const s = street.trim();
+  return s ? `${s}, ${area}` : area;
+}
+
 
 const MIN_ORDER_TOTAL = 10000;
 
@@ -49,13 +69,16 @@ function CheckoutContent() {
 useEffect(() => {
   if (!company) return;
 
+  const saved = splitAddress(company.address);
+
   const timer = window.setTimeout(() => {
     setForm((f) => ({
       ...f,
       businessName: company.business_name ?? f.businessName,
       contactName: company.name ?? f.contactName,
       phone: company.phone ?? f.phone,
-      address: company.address ?? f.address,
+      address: company.address ? saved.street : f.address,
+      area: saved.area ?? f.area,
       paymentMethod: company.is_credit ? "credit" : f.paymentMethod === "credit" ? "cash" : f.paymentMethod,
     }));
   }, 0);
@@ -103,7 +126,7 @@ useEffect(() => {
             name: form.contactName,
             business_name: form.businessName,
             phone: form.phone,
-            address: `${form.address}, ${form.area}`,
+            address: joinAddress(form.address, form.area),
           })
           .eq("id", company.id);
 
@@ -118,7 +141,7 @@ useEffect(() => {
             business_name: form.businessName,
             phone: form.phone,
             email: user.email ?? null,
-            address: `${form.address}, ${form.area}`,
+            address: joinAddress(form.address, form.area),
           })
           .select("id")
           .single();
@@ -133,7 +156,7 @@ useEffect(() => {
           name: form.contactName,
           business_name: form.businessName,
           phone: form.phone,
-          address: `${form.address}, ${form.area}`,
+          address: joinAddress(form.address, form.area),
         })
         .select("id")
         .single();

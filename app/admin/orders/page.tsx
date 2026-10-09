@@ -45,6 +45,17 @@ interface OrderItem {
   subtotal: number;
 }
 
+interface CreditInfo {
+  credit_check: { reason?: string; credit_limit?: number; owed_after?: number } | null;
+  decided_by: string | null;
+  decision_note: string | null;
+}
+
+function creditInfoOf(o: { order_credit_info: CreditInfo | CreditInfo[] | null }): CreditInfo | null {
+  const info = o.order_credit_info;
+  return Array.isArray(info) ? (info[0] ?? null) : info;
+}
+
 interface AdminOrder {
   id: string;
   created_at: string;
@@ -56,8 +67,8 @@ interface AdminOrder {
   payment_status: string | null;
   paymob_transaction_id: string | null;
   credit_status: string | null;
-  credit_check: { reason?: string; credit_limit?: number; owed_after?: number } | null;
-  credit_decided_by: string | null;
+  // staff-only table (one row per credit order); may come back as an object or a 1-item array
+  order_credit_info: CreditInfo | CreditInfo[] | null;
   odoo_order_name: string | null;
   customers: {
     business_name: string;
@@ -137,7 +148,7 @@ export default function AdminOrdersPage() {
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id, created_at, total, status, notes, customer_id, payment_method, payment_status, paymob_transaction_id, credit_status, credit_check, credit_decided_by, odoo_order_name, customers(business_name, name, phone, address)"
+        "id, created_at, total, status, notes, customer_id, payment_method, payment_status, paymob_transaction_id, credit_status, odoo_order_name, order_credit_info(credit_check, decided_by, decision_note), customers(business_name, name, phone, address)"
       )
       .order("created_at", { ascending: false });
 
@@ -545,30 +556,44 @@ export default function AdminOrdersPage() {
                           <p className="font-mono text-xs font-semibold text-[#111111]">{modal.odoo_order_name}</p>
                         </div>
                       )}
-                      {modal.credit_check?.reason && (
-                        <div className="col-span-2">
-                          <p className="text-xs text-gray-500">Reason</p>
-                          <p className="text-sm text-[#111111]">{modal.credit_check.reason}</p>
-                        </div>
-                      )}
-                      {canEdit && modal.credit_check?.credit_limit != null && (
-                        <div>
-                          <p className="text-xs text-gray-500">Credit limit</p>
-                          <p className="font-semibold">{formatMoney(modal.credit_check.credit_limit)}</p>
-                        </div>
-                      )}
-                      {canEdit && modal.credit_check?.owed_after != null && (
-                        <div>
-                          <p className="text-xs text-gray-500">Owed after this order</p>
-                          <p className="font-semibold">{formatMoney(modal.credit_check.owed_after)}</p>
-                        </div>
-                      )}
-                      {canEdit && modal.credit_decided_by && (
-                        <div className="col-span-2">
-                          <p className="text-xs text-gray-500">Decided by</p>
-                          <p className="text-sm text-[#111111]">{modal.credit_decided_by}</p>
-                        </div>
-                      )}
+                      {(() => {
+                        const info = creditInfoOf(modal);
+                        const check = info?.credit_check;
+                        return (
+                          <>
+                            {check?.reason && (
+                              <div className="col-span-2">
+                                <p className="text-xs text-gray-500">Reason</p>
+                                <p className="text-sm text-[#111111]">{check.reason}</p>
+                              </div>
+                            )}
+                            {canEdit && check?.credit_limit != null && (
+                              <div>
+                                <p className="text-xs text-gray-500">Credit limit</p>
+                                <p className="font-semibold">{formatMoney(check.credit_limit)}</p>
+                              </div>
+                            )}
+                            {canEdit && check?.owed_after != null && (
+                              <div>
+                                <p className="text-xs text-gray-500">Owed after this order</p>
+                                <p className="font-semibold">{formatMoney(check.owed_after)}</p>
+                              </div>
+                            )}
+                            {canEdit && info?.decided_by && (
+                              <div className="col-span-2">
+                                <p className="text-xs text-gray-500">Decided by</p>
+                                <p className="text-sm text-[#111111]">{info.decided_by}</p>
+                              </div>
+                            )}
+                            {canEdit && info?.decision_note && (
+                              <div className="col-span-2">
+                                <p className="text-xs text-gray-500">Decision note</p>
+                                <p className="text-sm text-[#111111] whitespace-pre-line" dir="auto">{info.decision_note}</p>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
