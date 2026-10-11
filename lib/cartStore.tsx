@@ -19,6 +19,7 @@ export interface CartProduct {
   isOnSale?: boolean;
   originalCartonPrice?: number | null;
   isSoldOut?: boolean;
+  comingSoon?: boolean;
   vatRate?: number;
   sizeValue?: number | null;
   sizeUnit?: string | null;
@@ -42,8 +43,8 @@ type CartAction =
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "ADD": {
-      // Safety net: never add a product that is marked sold out
-      if (action.product.isSoldOut) return state;
+      // Safety net: never add a product that is sold out or not yet available
+      if (action.product.isSoldOut || action.product.comingSoon) return state;
       const existing = state.items.find((i) => i.product.id === action.product.id);
       if (existing) {
         return {

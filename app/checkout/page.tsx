@@ -4,6 +4,7 @@ import { useState, Suspense, useEffect } from "react";
 import { useCart } from "@/lib/cartStore";
 import { useAuth } from "@/context/AuthContext";
 import { useActiveCompany } from "@/context/ActiveCompanyContext";
+import { UNAVAILABLE_REMOVED_MSG, useCartAvailability } from "@/components/ProductAvailability";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -53,6 +54,7 @@ function CheckoutContent() {
   const { items, total, count, clear, vatTotal, totalInclVat } = useCart();
   const { user } = useAuth();
   const { companies, activeCompany, setActiveCompanyId } = useActiveCompany();
+  const { toast: availabilityToast, recheck } = useCartAvailability();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -113,6 +115,19 @@ useEffect(() => {
 
   setError(null);
   setLoading(true);
+
+  // 0 — re-check stock / coming-soon against the database right before ordering
+  const { removed, error: availabilityError } = await recheck(items.map((i) => i.product.id));
+  if (availabilityError) {
+    setError("We couldn't confirm product availability. Please try again.");
+    setLoading(false);
+    return;
+  }
+  if (removed.length > 0) {
+    setError(`${UNAVAILABLE_REMOVED_MSG} Please review your order and place it again.`);
+    setLoading(false);
+    return;
+  }
 
   try {
     // 1 — resolve customer ID (the ordering company for logged-in users)
@@ -248,6 +263,7 @@ useEffect(() => {
             Shop Now
           </Link>
         </div>
+        {availabilityToast}
       </div>
     );
   }
@@ -468,6 +484,7 @@ useEffect(() => {
           </div>
         </div>
       </div>
+      {availabilityToast}
     </div>
   );
 }

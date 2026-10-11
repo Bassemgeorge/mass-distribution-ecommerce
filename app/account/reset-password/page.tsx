@@ -1,40 +1,106 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { accountLabel, displayEmail } from "@/lib/identity";
+import { AlertCircle, Eye, EyeOff, Loader2, MessageCircle } from "lucide-react";
+
+type Phase = "checking" | "ready" | "expired";
+
+/**
+ * Applies the recovery link from the URL. Any session already in this browser is signed out first,
+ * otherwise the new password would be saved on whoever happened to be logged in.
+ */
+async function applyRecoveryLink(): Promise<{ ok: boolean; email: string | null }> {
+  const url = new URL(window.location.href);
+  const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+  const query = url.searchParams;
+
+  const accessToken = hash.get("access_token");
+  const refreshToken = hash.get("refresh_token");
+  const code = query.get("code");
+  const tokenHash = query.get("token_hash");
+  const hasLink =
+    !!accessToken || !!code || !!tokenHash || query.get("type") === "recovery" || hash.get("type") === "recovery";
+
+  if (!hasLink || hash.get("error") || query.get("error")) return { ok: false, email: null };
+
+  await supabase.auth.signOut({ scope: "local" });
+
+  let error: unknown = null;
+  if (accessToken && refreshToken) {
+    ({ error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }));
+  } else if (code) {
+    ({ error } = await supabase.auth.exchangeCodeForSession(code));
+  } else if (tokenHash) {
+    ({ error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" }));
+  } else {
+    error = new Error("No recovery token in link");
+  }
+
+  if (error) return { ok: false, email: null };
+  const { data } = await supabase.auth.getUser();
+  return data.user ? { ok: true, email: data.user.email ?? null } : { ok: false, email: null };
+}
 
 export default function ResetPasswordPage() {
-  const { user, loading, updatePassword } = useAuth();
   const router = useRouter();
+  const started = useRef(false);
 
+  const [phase, setPhase] = useState<Phase>("checking");
+  const [email, setEmail] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSub] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    // React dev mode runs effects twice; the link can only be applied once
+    if (started.current) return;
+    started.current = true;
+    applyRecoveryLink().then(({ ok, email: linkEmail }) => {
+      setEmail(linkEmail);
+      setPhase(ok ? "ready" : "expired");
+    });
+  }, []);
+
+  // Don't leave tokens in the address bar / history. Next's router can write its initial URL back while it
+  // is still settling, so strip again shortly after if the tokens reappear.
+  useEffect(() => {
+    if (phase === "checking") return;
+    const strip = () => {
+      if (window.location.hash || window.location.search) {
+        window.history.replaceState(window.history.state, "", window.location.pathname);
+      }
+    };
+    strip();
+    const timers = [300, 1000, 2500].map((ms) => window.setTimeout(strip, ms));
+    return () => timers.forEach((t) => window.clearTimeout(t));
+  }, [phase]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
-    if (password !== confirmPassword) { setError("Passwords do not match."); return; }
+    if (password.length < 6) { setError("Password must be at least 6 characters. / كلمة السر لازم تكون ٦ حروف على الأقل."); return; }
+    if (password !== confirmPassword) { setError("Passwords do not match. / كلمتين السر مش متطابقين."); return; }
     setError(null);
     setSub(true);
-    const { error: err } = await updatePassword(password);
-    setSub(false);
+    const { error: err } = await supabase.auth.updateUser({ password });
     if (err) {
-      setError(err);
-    } else {
-      setDone(true);
-      setTimeout(() => router.push("/account/dashboard"), 1800);
+      setError(err.message);
+      setSub(false);
+      return;
     }
+    await supabase.auth.signOut({ scope: "local" });
+    const isPhoneAccount = !!email && !displayEmail(email);
+    router.replace(`/account/login?reset=${isPhoneAccount ? "phone" : "email"}`);
   }
 
   const inp = "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#1B4D2E] transition-colors bg-white";
+  const who = accountLabel(email);
 
   return (
     <div className="min-h-screen bg-[#F7F7F5] flex items-center justify-center px-4 py-12">
@@ -46,34 +112,40 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 p-8">
-          {loading ? (
+          {phase === "checking" ? (
             <div className="flex justify-center py-8">
               <Loader2 size={22} className="animate-spin text-gray-300" />
             </div>
-          ) : done ? (
-            <div className="text-center">
-              <CheckCircle size={40} className="text-[#1B4D2E] mx-auto mb-4" />
-              <h1 className="text-lg font-bold text-[#111111] mb-2">Password updated</h1>
-              <p className="text-gray-500 text-sm">Taking you to your dashboard…</p>
-            </div>
-          ) : !user ? (
+          ) : phase === "expired" ? (
             <div className="text-center">
               <AlertCircle size={40} className="text-red-400 mx-auto mb-4" />
-              <h1 className="text-lg font-bold text-[#111111] mb-2">Link expired or invalid</h1>
-              <p className="text-gray-500 text-sm mb-6">
-                This password reset link is no longer valid. Request a new one below.
-              </p>
-              <Link
-                href="/account/forgot-password"
-                className="inline-block w-full bg-[#1B4D2E] text-white font-semibold py-3 rounded-lg hover:bg-[#163d24] transition-colors text-sm"
+              <h1 className="text-lg font-bold text-[#111111] mb-2">Link expired</h1>
+              <p className="text-gray-600 text-sm">This link has expired. Contact us on WhatsApp for a new one.</p>
+              <p className="text-gray-500 text-sm mt-1 mb-6" dir="rtl">اللينك ده انتهى، كلمنا واتساب نبعتلك لينك جديد.</p>
+              <a
+                href="https://wa.me/201288895916"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-full items-center justify-center gap-2 bg-[#25D366] text-white font-semibold py-3 rounded-lg hover:bg-[#1ebe5d] transition-colors text-sm"
               >
-                Request New Link
-              </Link>
+                <MessageCircle size={16} /> WhatsApp <span dir="ltr">+20 128 889 5916</span>
+              </a>
             </div>
           ) : (
             <>
               <h1 className="text-xl font-bold text-[#111111] mb-1">Set New Password</h1>
-              <p className="text-gray-400 text-sm mb-6" dir="rtl">تعيين كلمة مرور جديدة</p>
+              <p className="text-gray-400 text-sm mb-4" dir="rtl">تعيين كلمة مرور جديدة</p>
+
+              {who && (
+                <div className="mb-5 rounded-lg bg-[#F7F7F5] border border-gray-200 px-3 py-2.5 text-sm">
+                  <p className="text-gray-500">
+                    Setting a password for: <span className="font-semibold text-[#111111]" dir="ltr">{who}</span>
+                  </p>
+                  <p className="text-gray-500 mt-0.5" dir="rtl">
+                    تعيين كلمة سر لـ: <span className="font-semibold text-[#111111]" dir="ltr">{who}</span>
+                  </p>
+                </div>
+              )}
 
               {error && (
                 <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2.5 mb-5">
@@ -83,7 +155,7 @@ export default function ResetPasswordPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">New Password</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">New Password · <span dir="rtl">كلمة السر الجديدة</span></label>
                   <div className="relative">
                     <input
                       type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
@@ -95,7 +167,7 @@ export default function ResetPasswordPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Confirm New Password</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Confirm New Password · <span dir="rtl">تأكيد كلمة السر</span></label>
                   <input
                     type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                     className={inp} placeholder="Repeat password" autoComplete="new-password"
@@ -106,7 +178,7 @@ export default function ResetPasswordPage() {
                   type="submit" disabled={submitting}
                   className="w-full bg-[#1B4D2E] text-white font-semibold py-3 rounded-lg hover:bg-[#163d24] transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  {submitting ? <><Loader2 size={15} className="animate-spin" /> Updating…</> : "Update Password"}
+                  {submitting ? <><Loader2 size={15} className="animate-spin" /> Saving…</> : "Save Password / حفظ كلمة السر"}
                 </button>
               </form>
             </>

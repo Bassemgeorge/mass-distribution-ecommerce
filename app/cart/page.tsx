@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useCart } from "@/lib/cartStore";
 import { Trash2, ArrowRight, ShoppingBag } from "lucide-react";
 import ProductImage from "@/components/ProductImage";
+import { useCartAvailability } from "@/components/ProductAvailability";
 
 // Typeable quantity input — lets B2B buyers enter large carton counts directly
 // instead of clicking +/- repeatedly. Falls back to 1 on blur if left invalid.
@@ -44,6 +45,7 @@ function QtyInput({ quantity, onChange }: { quantity: number; onChange: (q: numb
 
 export default function CartPage() {
 const { items, remove, update, total, count, vatTotal, totalInclVat } = useCart();
+const { toast: availabilityToast } = useCartAvailability();
 const [notes, setNotes] = useState("");
 const MIN_ORDER_TOTAL = 10000;
 const belowMinimum = total < MIN_ORDER_TOTAL;
@@ -62,6 +64,7 @@ const belowMinimum = total < MIN_ORDER_TOTAL;
             Browse Products <ArrowRight size={16} />
           </Link>
         </div>
+        {availabilityToast}
       </div>
     );
   }
@@ -181,6 +184,7 @@ const belowMinimum = total < MIN_ORDER_TOTAL;
           </div>
         </div>
       </div>
+      {availabilityToast}
     </div>
   );
 }

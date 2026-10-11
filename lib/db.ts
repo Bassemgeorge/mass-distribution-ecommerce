@@ -32,6 +32,14 @@ export interface DbProduct {
   size_unit?: string | null;
   size_band?: string | null;
   pack_type?: string | null;
+  coming_soon?: boolean | null;
+}
+
+/** 0 = orderable, 1 = sold out, 2 = coming soon — used to push unavailable products to the end of listings. */
+export function availabilityRank(p: { comingSoon?: boolean; isSoldOut?: boolean }): number {
+  if (p.comingSoon) return 2;
+  if (p.isSoldOut) return 1;
+  return 0;
 }
 
 export function formatSize(value: number, unit: string | null | undefined): string {
@@ -80,6 +88,8 @@ export function toProduct(p: DbProduct) {
     sizeUnit: p.size_unit ?? null,
     sizeBand: p.size_band ?? null,
     packType: p.pack_type ?? null,
+    // price/photo pending — shown but not orderable
+    comingSoon: p.coming_soon === true,
   };
 }
 

@@ -132,12 +132,29 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          <p className="text-gray-600 text-sm leading-relaxed mb-1">
-            A confirmation email is on its way to you. Our team will contact you within 2 hours to confirm delivery.
-          </p>
-          <p className="text-gray-400 text-sm leading-relaxed" dir="rtl">
-            تم استلام طلبك. سيتواصل معك فريقنا خلال ساعتين لتأكيد التوصيل.
-          </p>
+          {(() => {
+            const credit = order.payment_method === "credit";
+            const creditStatus = order.credit_status ?? "checking";
+            if (credit && creditStatus === "rejected") return null; // the red pill already explains it
+            if (credit && (creditStatus === "checking" || creditStatus === "held")) {
+              return (
+                <>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-1">We&apos;ll email you as soon as your order is confirmed.</p>
+                  <p className="text-gray-400 text-sm leading-relaxed" dir="rtl">هنبعتلك إيميل أول ما الطلب يتأكد.</p>
+                </>
+              );
+            }
+            return (
+              <>
+                <p className="text-gray-600 text-sm leading-relaxed mb-1">
+                  A confirmation email is on its way to you. Our team will contact you within 2 hours to confirm delivery.
+                </p>
+                <p className="text-gray-400 text-sm leading-relaxed" dir="rtl">
+                  تم استلام طلبك. سيتواصل معك فريقنا خلال ساعتين لتأكيد التوصيل.
+                </p>
+              </>
+            );
+          })()}
         </div>
 
         {/* Order items */}
@@ -174,11 +191,18 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
               <span className="text-[#1B4D2E]">EGP {(order.total_incl_vat ?? order.total).toFixed(2)}</span>
             </div>
           </div>
-          {order.notes && (
-            <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100">
-              <span className="font-medium">Notes:</span> {order.notes}
-            </p>
-          )}
+          {(() => {
+            // Checkout appends "Payment: credit" to notes; it duplicates the payment line for credit orders
+            const notes =
+              order.payment_method === "credit"
+                ? (order.notes ?? "").split(" | ").filter((part) => part.trim() !== "Payment: credit").join(" | ")
+                : order.notes;
+            return notes ? (
+              <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100">
+                <span className="font-medium">Notes:</span> {notes}
+              </p>
+            ) : null;
+          })()}
         </div>
 
         {/* Customer info */}

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { looksLikePhone } from "@/lib/identity";
-import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 
 const PHONE_ERROR = "Wrong mobile number or password / رقم الموبايل أو كلمة السر غير صحيحة";
 
@@ -20,6 +20,18 @@ export default function LoginPage() {
   const [showPw,   setShowPw]   = useState(false);
   const [submitting, setSub]    = useState(false);
   const [error,    setError]    = useState<string | null>(null);
+
+  // Coming back from the reset-password page
+  const [resetNotice, setResetNotice] = useState<string | null>(null);
+  useEffect(() => {
+    const reset = new URLSearchParams(window.location.search).get("reset");
+    if (!reset) return;
+    setResetNotice(
+      reset === "phone"
+        ? "Password saved. Please sign in with your mobile number. / تم حفظ كلمة السر، سجل دخول برقم موبايلك."
+        : "Password saved. Please sign in. / تم حفظ كلمة السر، سجل دخول."
+    );
+  }, []);
 
   // Already logged in → go to dashboard
   useEffect(() => {
@@ -96,6 +108,12 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl border border-gray-200 p-8">
           <h1 className="text-xl font-bold text-[#111111] mb-1">Sign In</h1>
           <p className="text-gray-400 text-sm mb-6" dir="rtl">تسجيل الدخول</p>
+
+          {resetNotice && !error && (
+            <div className="flex items-start gap-2 bg-[#177A41]/10 border border-[#177A41]/30 text-[#177A41] text-sm rounded-lg px-3 py-2.5 mb-5">
+              <CheckCircle size={15} className="flex-shrink-0 mt-0.5" /> {resetNotice}
+            </div>
+          )}
 
           {error && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2.5 mb-5">

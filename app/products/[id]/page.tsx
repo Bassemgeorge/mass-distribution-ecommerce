@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProductImage from "@/components/ProductImage";
 import ProductCard from "@/components/ProductCard";
-import { getProductById, getProducts, toProduct, MappedProduct } from "@/lib/db";
+import { getProductById, getProducts, toProduct, availabilityRank, MappedProduct } from "@/lib/db";
+import { ComingSoonPill, NotifyMeLink, SoldOutPill, UnavailableButton } from "@/components/ProductAvailability";
 import { useCart } from "@/lib/cartStore";
 import { useAuth } from "@/context/AuthContext";
 import { ShoppingCart, Check, ArrowLeft, Lock, Package, Zap, Shield, AlertCircle } from "lucide-react";
@@ -68,8 +69,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       setRelated(
         relDb
           .filter((p) => p.id !== data.id)
-          .slice(0, 3)
           .map(toProduct)
+          .sort((a, b) => availabilityRank(a) - availabilityRank(b))
+          .slice(0, 3)
       );
 
       setLoading(false);
@@ -157,10 +159,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
                 {product.category}
               </span>
-              {product.isSoldOut ? (
-                <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                  Sold out
-                </span>
+              {product.comingSoon ? null : product.isSoldOut ? (
+                <SoldOutPill />
               ) : product.isOnSale ? (
                 <span className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
                   Sale
@@ -176,7 +176,13 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               {product.nameAr}
             </p>
 
-            {authLoading ? (
+            {product.comingSoon ? (
+              <div className="rounded-xl p-5 mb-4 border bg-[#F7F7F5] border-gray-100">
+                <ComingSoonPill />
+                <p className="text-sm text-gray-600 mt-3">New prices and stock are on the way.</p>
+                <p className="text-sm text-gray-500 mt-0.5" dir="rtl">الأسعار الجديدة والمخزون في الطريق.</p>
+              </div>
+            ) : authLoading ? (
               <div className="rounded-xl p-5 mb-4 border bg-[#F7F7F5] border-gray-100 h-28 animate-pulse" />
             ) : !isLoggedIn ? (
               <div className="rounded-xl p-5 mb-4 border bg-[#F7F7F5] border-gray-100">
@@ -226,8 +232,19 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               </p>
             </div>
 
-            {authLoading ? (
+            {product.comingSoon ? (
+              <div className="mb-8 space-y-3">
+                <UnavailableButton kind="coming_soon" size="lg" />
+                <div className="text-center">
+                  <NotifyMeLink nameEn={product.nameEn} nameAr={product.nameAr} className="text-sm" />
+                </div>
+              </div>
+            ) : authLoading ? (
               <div className="h-14 bg-gray-100 rounded-lg animate-pulse mb-8" />
+            ) : product.isSoldOut ? (
+              <div className="mb-8">
+                <UnavailableButton kind="sold_out" size="lg" />
+              </div>
             ) : !isLoggedIn ? (
               <Link
                 href="/account/login"
@@ -236,13 +253,6 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 <Lock size={16} />
                 Login to Order
               </Link>
-            ) : product.isSoldOut ? (
-              <button
-                disabled
-                className="w-full bg-gray-200 text-gray-400 font-semibold py-3 rounded-lg cursor-not-allowed text-sm mb-8"
-              >
-                Sold out
-              </button>
             ) : (
               <>
                 <div className="flex items-center gap-3 mb-3">

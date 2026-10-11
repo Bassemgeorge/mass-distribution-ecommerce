@@ -7,6 +7,7 @@ import ProductImage from "./ProductImage";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { formatSize } from "@/lib/db";
+import { ComingSoonPill, NotifyMeLink, SoldOutPill, UnavailableButton } from "@/components/ProductAvailability";
 
 interface Props {
   product: CartProduct;
@@ -53,7 +54,8 @@ export default function ProductCard({ product }: Props) {
   const { items, add, update, remove } = useCart();
   const { user, loading: authLoading } = useAuth();
   const isLoggedIn = !!user;
-  const isSoldOut = !!product.isSoldOut;
+  const comingSoon = !!product.comingSoon;
+  const isSoldOut = !comingSoon && !!product.isSoldOut;
   const [justAdded, setJustAdded] = useState(false);
 
   const cartItem = items.find((i) => i.product.id === product.id);
@@ -97,10 +99,8 @@ export default function ProductCard({ product }: Props) {
         <span className="absolute top-3 left-3 bg-[#1B4D2E] text-white text-xs font-medium px-2.5 py-1 rounded-full">
           {product.brand}
         </span>
-        {isSoldOut ? (
-          <span className="absolute top-3 right-3 bg-gray-400 text-white text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
-            Sold out
-          </span>
+        {comingSoon ? null : isSoldOut ? (
+          <SoldOutPill className="absolute top-3 right-3" />
         ) : product.isOnSale ? (
           <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
             Sale
@@ -131,7 +131,15 @@ export default function ProductCard({ product }: Props) {
           {product.caseCount} pcs / carton
         </span>
 
-        {authLoading ? (
+        {comingSoon ? (
+          <div className="mt-auto pt-4 space-y-2">
+            <ComingSoonPill />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <NotifyMeLink nameEn={product.nameEn} nameAr={product.nameAr} />
+              <UnavailableButton kind="coming_soon" />
+            </div>
+          </div>
+        ) : authLoading ? (
           <div className="mt-auto pt-4 flex items-center justify-between gap-2">
             <div className="h-8 w-20 bg-gray-100 rounded animate-pulse" />
             <div className="h-8 w-16 bg-gray-100 rounded animate-pulse" />
@@ -145,14 +153,18 @@ export default function ProductCard({ product }: Props) {
               <p className="text-sm font-semibold text-gray-500">Login to see price</p>
             </div>
 
-            <Link
-              href="/account/login"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-[#1B4D2E] text-white hover:bg-[#163d24] transition-colors"
-            >
-              <Lock size={12} />
-              Login to Order
-            </Link>
+            {isSoldOut ? (
+              <UnavailableButton kind="sold_out" />
+            ) : (
+              <Link
+                href="/account/login"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-[#1B4D2E] text-white hover:bg-[#163d24] transition-colors"
+              >
+                <Lock size={12} />
+                Login to Order
+              </Link>
+            )}
           </div>
         ) : (
           <div className="mt-auto pt-4 flex items-center justify-between gap-2">
@@ -172,13 +184,7 @@ export default function ProductCard({ product }: Props) {
             </div>
 
             {isSoldOut ? (
-              <button
-                disabled
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-gray-200 text-gray-400 cursor-not-allowed"
-                onClick={(e) => e.preventDefault()}
-              >
-                Sold out
-              </button>
+              <UnavailableButton kind="sold_out" />
             ) : qty > 0 ? (
               <div
                 className="flex items-center border border-[#1B4D2E] rounded-lg overflow-hidden"

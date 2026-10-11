@@ -18,6 +18,26 @@ interface Product {
   image_url: string | null;
   is_active: boolean;
   stock: number;
+  coming_soon?: boolean | null;
+}
+
+function Toggle({ on, onChange, disabled, label }: { on: boolean; onChange: () => void; disabled?: boolean; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      title={label}
+      onClick={onChange}
+      disabled={disabled}
+      className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+        on ? "bg-[#1B4D2E]" : "bg-gray-300"
+      }`}
+    >
+      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${on ? "translate-x-4" : "translate-x-0.5"}`} />
+    </button>
+  );
 }
 
 const emptyProduct: Omit<Product, "id"> = {
@@ -103,6 +123,20 @@ export default function AdminProductsPage() {
     setSave(false);
   }
 
+  const [toggling, setToggling] = useState<string | null>(null);
+
+  async function toggleField(p: Product, patch: Partial<Pick<Product, "coming_soon" | "stock">>, key: string) {
+    setToggling(key);
+    const { error } = await supabase.from("products").update(patch).eq("id", p.id);
+    if (error) {
+      console.error("Product toggle error:", error.message);
+      setFetchErr(error.message);
+    } else {
+      setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, ...patch } : x)));
+    }
+    setToggling(null);
+  }
+
   async function addProduct() {
     if (!newProd.name_en || !newProd.brand || !newProd.category) return;
     setSave(true);
@@ -173,6 +207,8 @@ export default function AdminProductsPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden lg:table-cell">Case Count</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Stock</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Active</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">In stock</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">Coming soon</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -198,6 +234,22 @@ export default function AdminProductsPage() {
                     <td className="px-4 py-3 text-center text-xs text-gray-500 hidden sm:table-cell">{p.stock ?? 999}</td>
                     <td className="px-4 py-3 text-center hidden sm:table-cell">
                       <span className={`inline-block w-2 h-2 rounded-full ${p.is_active === false ? "bg-gray-300" : "bg-green-400"}`} />
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <Toggle
+                        label={`In stock: ${p.name_en}`}
+                        on={(p.stock ?? 999) > 0}
+                        disabled={toggling === `stock-${p.id}`}
+                        onChange={() => toggleField(p, { stock: (p.stock ?? 999) > 0 ? 0 : 999 }, `stock-${p.id}`)}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <Toggle
+                        label={`Coming soon: ${p.name_en}`}
+                        on={p.coming_soon === true}
+                        disabled={toggling === `soon-${p.id}`}
+                        onChange={() => toggleField(p, { coming_soon: p.coming_soon !== true }, `soon-${p.id}`)}
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <button

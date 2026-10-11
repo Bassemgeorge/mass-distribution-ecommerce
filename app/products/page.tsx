@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Fuse from "fuse.js";
 import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
-import { getProducts, getCategoryCounts, getBrandCounts, toProduct, formatSize, MappedProduct } from "@/lib/db";
+import { getProducts, getCategoryCounts, getBrandCounts, toProduct, formatSize, availabilityRank, MappedProduct } from "@/lib/db";
 import { Search, SlidersHorizontal, X, AlertCircle, ChevronDown } from "lucide-react";
 
 type FacetKey = "type" | "line" | "pack" | "size";
@@ -344,9 +344,12 @@ function ProductsContent() {
 
   const filtered = useMemo(() => {
     const result = basePool.filter((p) => matchesFacets(p));
-    if (search.trim() || !hasLineSort) return result;
+    // Available first, then sold out, then coming soon (stable sort keeps search relevance within each group)
+    const byAvailability = (a: MappedProduct, b: MappedProduct) => availabilityRank(a) - availabilityRank(b);
+    if (search.trim() || !hasLineSort) return [...result].sort(byAvailability);
     return [...result].sort(
       (a, b) =>
+        byAvailability(a, b) ||
         (a.productLine ?? "").localeCompare(b.productLine ?? "") ||
         (a.productType ?? "").localeCompare(b.productType ?? "") ||
         (a.sizeValue ?? Infinity) - (b.sizeValue ?? Infinity)
@@ -498,6 +501,13 @@ function ProductsContent() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {activeCategories.length === 1 && activeCategories[0] === "Frozen" && (
+          <div className="mb-4 rounded-xl border border-[#177A41]/30 bg-[#177A41]/5 px-4 py-2.5 text-sm text-[#177A41]">
+            <p className="font-semibold">Frozen range is being restocked with new prices, back soon.</p>
+            <p dir="rtl">قسم المجمدات بيتجدد بأسعار جديدة، راجعين قريب.</p>
           </div>
         )}
 
