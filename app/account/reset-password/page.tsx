@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,46 +9,59 @@ import { accountLabel, displayEmail } from "@/lib/identity";
 import { AlertCircle, Eye, EyeOff, Loader2, MessageCircle } from "lucide-react";
 
 type Phase = "checking" | "ready" | "expired";
+type RecoveryResult = { ok: boolean; email: string | null };
 
 /**
- * Applies the recovery link from the URL. Any session already in this browser is signed out first,
- * otherwise the new password would be saved on whoever happened to be logged in.
+ * Applies the recovery link from the URL. A session already in this browser is signed out first
+ * (locally), otherwise the new password would be saved on whoever happened to be logged in.
+ * Must run at most once per page load: running it again would sign out the recovery session itself.
  */
-async function applyRecoveryLink(): Promise<{ ok: boolean; email: string | null }> {
-  const url = new URL(window.location.href);
-  const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
-  const query = url.searchParams;
+async function applyRecoveryLink(): Promise<RecoveryResult> {
+  try {
+    const url = new URL(window.location.href);
+    const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+    const query = url.searchParams;
 
-  const accessToken = hash.get("access_token");
-  const refreshToken = hash.get("refresh_token");
-  const code = query.get("code");
-  const tokenHash = query.get("token_hash");
-  const hasLink =
-    !!accessToken || !!code || !!tokenHash || query.get("type") === "recovery" || hash.get("type") === "recovery";
+    const accessToken = hash.get("access_token");
+    const refreshToken = hash.get("refresh_token");
+    const code = query.get("code");
+    const tokenHash = query.get("token_hash");
+    const hasLink =
+      !!accessToken || !!code || !!tokenHash || query.get("type") === "recovery" || hash.get("type") === "recovery";
 
-  if (!hasLink || hash.get("error") || query.get("error")) return { ok: false, email: null };
+    if (!hasLink || hash.get("error") || query.get("error")) return { ok: false, email: null };
 
-  await supabase.auth.signOut({ scope: "local" });
+    const { data: existing } = await supabase.auth.getSession();
+    if (existing.session) await supabase.auth.signOut({ scope: "local" });
 
-  let error: unknown = null;
-  if (accessToken && refreshToken) {
-    ({ error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }));
-  } else if (code) {
-    ({ error } = await supabase.auth.exchangeCodeForSession(code));
-  } else if (tokenHash) {
-    ({ error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" }));
-  } else {
-    error = new Error("No recovery token in link");
+    let error: unknown = null;
+    if (accessToken && refreshToken) {
+      ({ error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }));
+    } else if (code) {
+      ({ error } = await supabase.auth.exchangeCodeForSession(code));
+    } else if (tokenHash) {
+      ({ error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" }));
+    } else {
+      error = new Error("No recovery token in link");
+    }
+
+    if (error) return { ok: false, email: null };
+    const { data } = await supabase.auth.getUser();
+    return data.user ? { ok: true, email: data.user.email ?? null } : { ok: false, email: null };
+  } catch {
+    return { ok: false, email: null };
   }
+}
 
-  if (error) return { ok: false, email: null };
-  const { data } = await supabase.auth.getUser();
-  return data.user ? { ok: true, email: data.user.email ?? null } : { ok: false, email: null };
+// Module-level (not a ref): survives component remounts, e.g. when Next re-renders after the URL changes.
+let recoveryRun: Promise<RecoveryResult> | null = null;
+function applyRecoveryLinkOnce() {
+  recoveryRun ??= applyRecoveryLink();
+  return recoveryRun;
 }
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const started = useRef(false);
 
   const [phase, setPhase] = useState<Phase>("checking");
   const [email, setEmail] = useState<string | null>(null);
@@ -59,17 +72,19 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // React dev mode runs effects twice; the link can only be applied once
-    if (started.current) return;
-    started.current = true;
-    applyRecoveryLink().then(({ ok, email: linkEmail }) => {
+    let active = true;
+    applyRecoveryLinkOnce().then(({ ok, email: linkEmail }) => {
+      if (!active) return;
       setEmail(linkEmail);
       setPhase(ok ? "ready" : "expired");
     });
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Don't leave tokens in the address bar / history. Next's router can write its initial URL back while it
-  // is still settling, so strip again shortly after if the tokens reappear.
+  // is still settling, so strip again shortly after if the tokens reappear. History only — nothing auth-related.
   useEffect(() => {
     if (phase === "checking") return;
     const strip = () => {
@@ -88,12 +103,21 @@ export default function ResetPasswordPage() {
     if (password !== confirmPassword) { setError("Passwords do not match. / كلمتين السر مش متطابقين."); return; }
     setError(null);
     setSub(true);
-    const { error: err } = await supabase.auth.updateUser({ password });
-    if (err) {
-      setError(err.message);
+
+    // Supabase errors are never shown raw here; a missing session or a failed save means the link is no good
+    const { data: current } = await supabase.auth.getSession();
+    if (!current.session) {
       setSub(false);
+      setPhase("expired");
       return;
     }
+    const { error: err } = await supabase.auth.updateUser({ password });
+    if (err) {
+      setSub(false);
+      setPhase("expired");
+      return;
+    }
+    // Saved: end the recovery session so the customer signs in fresh with the new password
     await supabase.auth.signOut({ scope: "local" });
     const isPhoneAccount = !!email && !displayEmail(email);
     router.replace(`/account/login?reset=${isPhoneAccount ? "phone" : "email"}`);

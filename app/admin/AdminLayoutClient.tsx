@@ -69,7 +69,9 @@ export default function AdminLayoutClient({
       if (cancelled) return;
 
       if (error || (role !== "admin" && role !== "sales")) {
-        await supabase.auth.signOut();
+        // Don't sign out: the session is shared across tabs and may be a customer's (e.g. a password
+        // reset in another tab). Signing it out here revoked recovery sessions. Just leave the admin area.
+        setStaff(null);
         setAuthed(false);
         router.replace("/admin/login");
         return;
