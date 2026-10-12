@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -39,66 +40,79 @@ export default function AdminLayoutClient({
 
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [staff, setStaff] = useState<StaffInfo | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // user id whose staff role is resolved (or being resolved); undefined = nothing checked yet
+  const checkedUserId = useRef<string | null | undefined>(undefined);
 
   const isLogin = pathname === "/admin/login";
 
   useEffect(() => {
+    if (isLogin) {
+      setAuthed(true);
+      return;
+    }
+
     let cancelled = false;
 
-    async function checkAdminAccess() {
-      if (isLogin) {
-        setAuthed(true);
-        return;
-      }
+    // Resolves panel access once per user. Token refreshes keep the same user, so they don't re-check.
+    async function resolveAccess(user: User | null) {
+      const uid = user?.id ?? null;
+      if (checkedUserId.current === uid) return;
+      checkedUserId.current = uid;
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.user) {
-        if (!cancelled) {
-          setAuthed(false);
-          router.replace("/admin/login");
-        }
-        return;
-      }
-
-      const { data: role, error } = await supabase.rpc("my_staff_role");
-
-      if (cancelled) return;
-
-      if (error || (role !== "admin" && role !== "sales")) {
-        // Don't sign out: the session is shared across tabs and may be a customer's (e.g. a password
-        // reset in another tab). Signing it out here revoked recovery sessions. Just leave the admin area.
+      if (!user) {
         setStaff(null);
         setAuthed(false);
         router.replace("/admin/login");
         return;
       }
 
-      const { data: staffRow } = await supabase
-        .from("staff_roles")
-        .select("name")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+      // A transient error (e.g. mid token refresh) is not "no role": retry before deciding
+      let role: unknown = null;
+      let error: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        ({ data: role, error } = await supabase.rpc("my_staff_role"));
+        if (!error) break;
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+      if (cancelled || checkedUserId.current !== uid) return;
 
-      if (cancelled) return;
+      if (error) {
+        checkedUserId.current = undefined; // allow a manual retry
+        setCheckFailed(true);
+        return;
+      }
 
-      setStaff({
-        role,
-        userId: session.user.id,
-        name: staffRow?.name || session.user.email || (role === "admin" ? "Admin" : "Sales"),
-      });
+      if (role !== "admin" && role !== "sales") {
+        // Not staff. Don't sign out: the session is shared across tabs and may be a customer's
+        // (e.g. a password reset in another tab). Just leave the admin area.
+        setStaff(null);
+        setAuthed(false);
+        router.replace("/admin/login?denied=1");
+        return;
+      }
+
+      const { data: staffRow } = await supabase.from("staff_roles").select("name").eq("user_id", uid).maybeSingle();
+      if (cancelled || checkedUserId.current !== uid) return;
+
+      setCheckFailed(false);
+      setStaff({ role, userId: user.id, name: staffRow?.name || user.email || (role === "admin" ? "Admin" : "Sales") });
       setAuthed(true);
     }
 
-    checkAdminAccess();
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled) resolveAccess(data.session?.user ?? null);
+    });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      checkAdminAccess();
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION") return; // handled by getSession() above
+      // Calling Supabase from inside the auth callback can deadlock the client; defer it
+      window.setTimeout(() => {
+        if (!cancelled) resolveAccess(session?.user ?? null);
+      }, 0);
     });
 
     return () => {
@@ -116,10 +130,29 @@ export default function AdminLayoutClient({
 
   async function signOut() {
     await supabase.auth.signOut();
+    checkedUserId.current = undefined;
+    setStaff(null);
+    setAuthed(null);
     router.push("/admin/login");
   }
 
   if (isLogin) return <>{children}</>;
+
+  if (checkFailed) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center px-4">
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center max-w-sm">
+          <p className="text-sm text-gray-600 mb-4">We couldn&apos;t verify your access. Please check your connection and try again.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-[#1B4D2E] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#163d24]"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (authed === null || (authed && (!staff || blocked))) {
     return (

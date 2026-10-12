@@ -30,14 +30,21 @@ export default function AdminLoginPage() {
           error: sessionError,
         } = await supabase.auth.getSession();
 
+        const deniedParam = new URLSearchParams(window.location.search).get("denied") === "1";
+
         if (sessionError || !session?.user) return;
 
         const { data: role, error: roleError } = await supabase.rpc(
           "my_staff_role",
         );
 
-        if (!roleError && !cancelled && (role === "admin" || role === "sales")) {
+        if (cancelled || roleError) return;
+
+        if (role === "admin" || role === "sales") {
           router.replace(role === "sales" ? "/admin/follow-ups" : "/admin");
+        } else if (deniedParam || role === null) {
+          // Signed in, but not staff (e.g. a customer). Keep their session; just explain.
+          setError("Access denied. This account is not an admin.");
         }
       } catch {
         // Keep the sign-in form available if the existing session check fails.
@@ -78,13 +85,13 @@ export default function AdminLoginPage() {
       );
 
       if (roleError) {
-        await supabase.auth.signOut();
+        await supabase.auth.signOut({ scope: "local" });
         setError("We couldn't verify your access. Please try again.");
         return;
       }
 
       if (role !== "admin" && role !== "sales") {
-        await supabase.auth.signOut();
+        await supabase.auth.signOut({ scope: "local" });
         setError("Access denied. This account is not an admin.");
         return;
       }
@@ -92,7 +99,7 @@ export default function AdminLoginPage() {
       router.replace(role === "sales" ? "/admin/follow-ups" : "/admin");
       router.refresh();
     } catch {
-      await supabase.auth.signOut().catch(() => undefined);
+      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
       setError("Something went wrong. Please try again.");
     } finally {
       submittingRef.current = false;
