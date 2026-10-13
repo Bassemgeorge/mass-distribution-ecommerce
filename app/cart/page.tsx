@@ -6,6 +6,7 @@ import { useCart } from "@/lib/cartStore";
 import { Trash2, ArrowRight, ShoppingBag } from "lucide-react";
 import ProductImage from "@/components/ProductImage";
 import { useCartAvailability } from "@/components/ProductAvailability";
+import { MIN_ORDER_PROMO_NOTE, getMinOrderTotal, isMinOrderPromoActive } from "@/lib/orderRules";
 
 // Typeable quantity input — lets B2B buyers enter large carton counts directly
 // instead of clicking +/- repeatedly. Falls back to 1 on blur if left invalid.
@@ -47,7 +48,8 @@ export default function CartPage() {
 const { items, remove, update, total, count, vatTotal, totalInclVat } = useCart();
 const { toast: availabilityToast } = useCartAvailability();
 const [notes, setNotes] = useState("");
-const MIN_ORDER_TOTAL = 10000;
+const MIN_ORDER_TOTAL = getMinOrderTotal();
+const minOrderPromo = isMinOrderPromoActive();
 const belowMinimum = total < MIN_ORDER_TOTAL;
 
   if (count === 0) {
@@ -159,6 +161,7 @@ const belowMinimum = total < MIN_ORDER_TOTAL;
              {belowMinimum && (
   <p className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
     Minimum order is EGP {MIN_ORDER_TOTAL.toLocaleString()}.
+    {minOrderPromo && <span className="block mt-0.5 opacity-80">{MIN_ORDER_PROMO_NOTE}</span>}
   </p>
 )}
 
@@ -168,6 +171,7 @@ const belowMinimum = total < MIN_ORDER_TOTAL;
     className="block w-full text-center bg-gray-300 text-white font-semibold py-3 rounded-lg cursor-not-allowed text-sm"
   >
     Minimum order EGP {MIN_ORDER_TOTAL.toLocaleString()}
+    {minOrderPromo && <span className="block text-[11px] font-normal">{MIN_ORDER_PROMO_NOTE}</span>}
   </button>
 ) : (
   <Link

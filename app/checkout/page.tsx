@@ -5,6 +5,7 @@ import { useCart } from "@/lib/cartStore";
 import { useAuth } from "@/context/AuthContext";
 import { useActiveCompany } from "@/context/ActiveCompanyContext";
 import { UNAVAILABLE_REMOVED_MSG, useCartAvailability } from "@/components/ProductAvailability";
+import { MIN_ORDER_PROMO_NOTE, getMinOrderTotal, isMinOrderPromoActive } from "@/lib/orderRules";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -43,8 +44,6 @@ function joinAddress(street: string, area: string) {
 }
 
 
-const MIN_ORDER_TOTAL = 10000;
-
 const emptyForm: FormState = {
   businessName: "", contactName: "", phone: "",
   address: "", area: "Cairo", paymentMethod: "cash", notes: "",
@@ -55,6 +54,9 @@ function CheckoutContent() {
   const { user } = useAuth();
   const { companies, activeCompany, setActiveCompanyId } = useActiveCompany();
   const { toast: availabilityToast, recheck } = useCartAvailability();
+  // Checked against the subtotal before the first-order discount
+  const MIN_ORDER_TOTAL = getMinOrderTotal();
+  const minOrderPromo = isMinOrderPromoActive();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -420,7 +422,10 @@ useEffect(() => {
                   <Loader2 size={16} className="animate-spin" /> Placing Order…
                 </>
               ) : total < MIN_ORDER_TOTAL ? (
-                `Minimum order EGP ${MIN_ORDER_TOTAL.toLocaleString()}`
+                <span className="flex flex-col items-center">
+                  <span>Minimum order EGP {MIN_ORDER_TOTAL.toLocaleString()}</span>
+                  {minOrderPromo && <span className="text-[11px] font-normal">{MIN_ORDER_PROMO_NOTE}</span>}
+                </span>
               ) : (
                 form.paymentMethod === "paymob" ? "Pay Online" : form.paymentMethod === "credit" ? "Place Order on Credit" : "Place Order"
               )}
@@ -477,6 +482,7 @@ useEffect(() => {
                 {total < MIN_ORDER_TOTAL && (
                   <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
                     Minimum order is EGP {MIN_ORDER_TOTAL.toLocaleString()}.
+                    {minOrderPromo && <span className="block mt-0.5 opacity-80">{MIN_ORDER_PROMO_NOTE}</span>}
                   </p>
                 )}
               </div>
