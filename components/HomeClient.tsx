@@ -30,12 +30,39 @@ function useCountdown(target: Date) {
   return t;
 }
 
+type TextSlide = {
+  kind?: "text";
+  gradient: string;
+  accent: string;
+  badge: string;
+  watermark: string;
+  headline: string;
+  headlineAr: string;
+  sub: string;
+  countdown: string | null;
+  cta: string;
+  href: string;
+  image: string;
+  imageAlt: string;
+};
+
+// Ready-made artwork (text and button are part of the image)
+type ImageSlide = {
+  kind: "image";
+  href: string;
+  desktopImage: string;
+  mobileImage: string;
+  imageAlt: string;
+};
+
+type PromoSlide = TextSlide | ImageSlide;
+
 function PromoBanner() {
   const [slide, setSlide] = useState(0);
   const { days, hours, mins } = useCountdown(SALE_END);
   const saleActive = Date.now() < SALE_END.getTime();
 
-  const slides = [
+  const slides: PromoSlide[] = [
     ...(saleActive
       ? [
           {
@@ -55,18 +82,11 @@ function PromoBanner() {
         ]
       : []),
     {
-      gradient: "from-[#081c10] via-[#153d24] to-[#1B4D2E]",
-      accent: "text-[#1B4D2E]",
-      badge: "New Arrival",
-      watermark: "NEW",
-      headline: "Gorilla Energy Drinks",
-      headlineAr: "مشروبات الطاقة جوريلا",
-      sub: "3 bold flavors just landed — order today",
-      countdown: null as string | null,
-      cta: "Shop Gorilla",
-      href: "/products?brand=Gorilla",
-      image: "https://niltkbrsuccfwlaistrz.supabase.co/storage/v1/object/public/product-images/Gorilla%20Energy%20Drink%20250ml%20-%20Mango%20Coconut%20(1).png",
-      imageAlt: "Gorilla Energy Drink Mango Coconut",
+      kind: "image" as const,
+      href: "/products?brand=Zee",
+      desktopImage: "/banners/zee-desktop.jpg",
+      mobileImage: "/banners/zee-mobile.jpg",
+      imageAlt: "Zee Sparkling Water – No More Bitter Endings. Zero sugar. Zero compromise. Try it now",
     },
   ];
 
@@ -79,8 +99,30 @@ function PromoBanner() {
   const activeSlide = slide % slides.length;
 
   return (
-    <section className="relative overflow-hidden" style={{ minHeight: 260 }}>
-      {slides.map((s, i) => (
+    <section className="relative overflow-hidden sm:min-h-[260px]">
+      {slides.map((s, i) => s.kind === "image" ? (
+        <a
+          key={s.href}
+          href={s.href}
+          aria-hidden={i !== activeSlide}
+          tabIndex={i === activeSlide ? 0 : -1}
+          className={`group block transition-opacity duration-700 ${
+            i === activeSlide ? "relative opacity-100" : "absolute inset-0 opacity-0 pointer-events-none"
+          }`}
+          // fills the sides on screens wider than the 1200px artwork so its edges blend
+          style={{ background: "linear-gradient(90deg,#cfd3d5 0%,#b9c1c8 30%,#4a5561 70%,#3e4853 100%)" }}
+        >
+          <picture>
+            <source media="(max-width: 639px)" srcSet={s.mobileImage} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={s.desktopImage}
+              alt={s.imageAlt}
+              className="block mx-auto w-full max-w-[1200px] h-auto sm:h-[260px] sm:object-cover sm:object-left group-hover:brightness-105 transition"
+            />
+          </picture>
+        </a>
+      ) : (
         <a
           key={s.href}
           href={s.href}
