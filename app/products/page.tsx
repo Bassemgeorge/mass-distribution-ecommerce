@@ -6,7 +6,8 @@ import Fuse from "fuse.js";
 import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { getProducts, getCategoryCounts, getBrandCounts, toProduct, formatSize, availabilityRank, MappedProduct } from "@/lib/db";
-import { Search, SlidersHorizontal, X, AlertCircle, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { Search, SlidersHorizontal, X, AlertCircle, ChevronDown, PackageSearch } from "lucide-react";
 
 type FacetKey = "type" | "line" | "pack" | "size";
 
@@ -604,6 +605,31 @@ function ProductsContent() {
               <ProductCardSkeleton key={i} />
             ))}
           </div>
+        )}
+
+        {/* No / few real search results → offer the Sourcing Desk. Fuzzy search returns loose matches,
+            so also offer it when no result's name actually contains the search text. */}
+        {!loading && search.trim() !== "" && (filtered.length < 4 || !filtered.some((p) => {
+          const q = search.trim().toLowerCase();
+          return p.nameEn.toLowerCase().includes(q) || p.nameAr.includes(search.trim());
+        })) && (
+          <Link
+            href={`/sourcing/new?q=${encodeURIComponent(search.trim())}`}
+            className="mb-6 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-[#1B4D2E]/25 bg-[#1B4D2E]/5 px-5 py-4 hover:border-[#1B4D2E] transition-colors"
+          >
+            <PackageSearch size={28} className="text-[#1B4D2E] flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-[#111111]">
+                Can&apos;t find &quot;<span dir="auto">{search.trim()}</span>&quot;? We&apos;ll source it for you today.
+              </p>
+              <p className="text-sm text-gray-600" dir="rtl">
+                مش لاقيه؟ هنوفره لك النهارده
+              </p>
+            </div>
+            <span className="inline-flex items-center justify-center bg-[#1B4D2E] text-white text-sm font-semibold px-4 py-2 rounded-lg">
+              Request it / اطلبه
+            </span>
+          </Link>
         )}
 
         {/* Empty state */}

@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Upload,
   PhoneCall,
+  PackageSearch,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { StaffInfo, StaffRoleProvider, canAccess } from "@/context/StaffRoleContext";
@@ -23,6 +24,7 @@ import { StaffInfo, StaffRoleProvider, canAccess } from "@/context/StaffRoleCont
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/follow-ups", label: "Follow-ups", icon: PhoneCall },
+  { href: "/admin/sourcing", label: "Sourcing Desk", icon: PackageSearch },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/import-prices", label: "Import Prices", icon: Upload },

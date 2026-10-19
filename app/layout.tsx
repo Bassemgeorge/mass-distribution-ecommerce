@@ -5,7 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ActiveCompanyProvider } from "@/context/ActiveCompanyContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Analytics } from "@vercel/analytics/next";
+import SiteAnalytics from "@/components/SiteAnalytics";
 
 export const metadata: Metadata = {
   title: "Mass Distribution — HORECA Supplies Egypt",
@@ -33,7 +33,7 @@ export default function RootLayout({
             </CartProvider>
           </ActiveCompanyProvider>
         </AuthProvider>
-        <Analytics />
+        <SiteAnalytics />
       </body>
     </html>
   );

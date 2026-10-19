@@ -33,10 +33,16 @@ export default function LoginPage() {
     );
   }, []);
 
-  // Already logged in → go to dashboard
+  // Where to go after signing in: a same-site path from ?next=, else the dashboard
+  const [nextPath] = useState(() => {
+    const next = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("next");
+    return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : "/account/dashboard";
+  });
+
+  // Already logged in → go on
   useEffect(() => {
-    if (!loading && user) router.replace("/account/dashboard");
-  }, [user, loading, router]);
+    if (!loading && user) router.replace(nextPath);
+  }, [user, loading, router, nextPath]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,7 +63,7 @@ export default function LoginPage() {
         setError(err.includes("Invalid") ? "Incorrect email or password." : err);
         setSub(false);
       } else {
-        router.push("/account/dashboard");
+        router.push(nextPath);
       }
       return;
     }
@@ -84,7 +90,7 @@ export default function LoginPage() {
         setSub(false);
         return;
       }
-      router.push("/account/dashboard");
+      router.push(nextPath);
     } catch {
       setError("Something went wrong. Please try again.");
       setSub(false);

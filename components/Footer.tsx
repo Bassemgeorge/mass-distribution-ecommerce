@@ -2,10 +2,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { isSourcingStaffPath } from "@/lib/sourcing";
 
 export default function Footer() {
   const pathname = usePathname();
-  if (pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/admin") || isSourcingStaffPath(pathname)) return null;
 
   return (
     <footer className="bg-[#111111] text-white mt-auto">

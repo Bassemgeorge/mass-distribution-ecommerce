@@ -8,7 +8,7 @@ import { useActiveCompany } from "@/context/ActiveCompanyContext";
 import CompanySwitcher from "@/components/CompanySwitcher";
 import { displayEmail } from "@/lib/identity";
 import { supabase } from "@/lib/supabase";
-import { ShoppingBag, Clock, DollarSign, CalendarDays, LogOut, ChevronRight, Loader2 } from "lucide-react";
+import { ShoppingBag, Clock, DollarSign, CalendarDays, LogOut, ChevronRight, Loader2, PackageSearch } from "lucide-react";
 
 interface Order {
   id: string;
@@ -206,6 +206,16 @@ export default function DashboardPage() {
             <div>
               <p className="font-semibold text-sm">Order History</p>
               <p className="text-gray-400 text-xs">All past orders</p>
+            </div>
+            <ChevronRight size={16} className="ml-auto text-gray-300" />
+          </Link>
+          <Link href="/account/requests" className="flex items-center gap-3 bg-white border border-gray-200 text-[#111111] rounded-xl p-5 hover:border-[#1B4D2E] transition-colors md:col-span-2">
+            <PackageSearch size={20} className="text-[#1B4D2E]" />
+            <div>
+              <p className="font-semibold text-sm">
+                My requests / <span dir="rtl">طلباتي</span>
+              </p>
+              <p className="text-gray-400 text-xs">Item requests and invoice quotes from the Sourcing Desk</p>
             </div>
             <ChevronRight size={16} className="ml-auto text-gray-300" />
           </Link>

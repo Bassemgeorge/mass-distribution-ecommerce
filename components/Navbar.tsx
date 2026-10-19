@@ -4,12 +4,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/lib/cartStore";
 import { useAuth } from "@/context/AuthContext";
-import { ShoppingCart, Menu, X, User, LayoutDashboard, ClipboardList, LogOut, ChevronDown } from "lucide-react";
+import { ShoppingCart, Menu, X, User, LayoutDashboard, ClipboardList, LogOut, ChevronDown, PackageSearch, Search } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useActiveCompany } from "@/context/ActiveCompanyContext";
 import CompanySwitcher from "@/components/CompanySwitcher";
 import { displayEmail } from "@/lib/identity";
+import { isSourcingStaffPath } from "@/lib/sourcing";
 
 export default function Navbar() {
   const { count } = useCart();
@@ -42,7 +43,7 @@ export default function Navbar() {
     router.push("/");
   }
   
-  if (pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/admin") || isSourcingStaffPath(pathname)) return null;
 
   return (
     <header className="sticky top-0 z-50 bg-[#111111] border-b border-white/10">
@@ -77,6 +78,16 @@ export default function Navbar() {
 
         {/* Right side */}
         <div className="flex items-center gap-3">
+          <Link
+            href="/sourcing/new"
+            className="hidden md:inline-flex items-center gap-1.5 border border-white/25 text-white/85 hover:text-white hover:border-white/60 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+          >
+            <PackageSearch size={14} />
+            Can&apos;t find it?
+            <span className="hidden xl:inline">
+              <span className="opacity-60">/</span> <span dir="rtl">مش لاقي اللي محتاجه؟</span>
+            </span>
+          </Link>
           <Link href="/cart" className="relative p-2 text-white/70 hover:text-white transition-colors">
             <ShoppingCart size={20} />
             {count > 0 && (
@@ -115,6 +126,12 @@ export default function Navbar() {
                   </Link>
                   <Link href="/account/orders" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-[#111111] hover:bg-gray-50 transition-colors">
                     <ClipboardList size={14} className="text-[#1B4D2E]" /> My Orders
+                  </Link>
+                  <Link href="/account/requests" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-[#111111] hover:bg-gray-50 transition-colors">
+                    <PackageSearch size={14} className="text-[#1B4D2E]" /> My requests <span className="text-gray-400" dir="rtl">طلباتي</span>
+                  </Link>
+                  <Link href="/sourcing/new" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-[#111111] hover:bg-gray-50 transition-colors">
+                    <Search size={14} className="text-[#1B4D2E]" /> Can&apos;t find it? <span className="text-gray-400" dir="rtl">مش لاقي؟</span>
                   </Link>
                   <div className="border-t border-gray-100 mt-1 pt-1">
                     <button onClick={handleSignOut} className="flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors">
@@ -162,6 +179,14 @@ export default function Navbar() {
             </Link>
           ))}
 
+          <Link
+            href="/sourcing/new"
+            onClick={() => setOpen(false)}
+            className="text-white font-semibold py-2.5 border-b border-white/10 transition-colors flex items-center gap-2"
+          >
+            <PackageSearch size={14} /> Can&apos;t find it? / <span dir="rtl">مش لاقي اللي محتاجه؟</span>
+          </Link>
+
           {user ? (
             <>
               {companies.length > 1 && (
@@ -174,6 +199,9 @@ export default function Navbar() {
               </Link>
               <Link href="/account/orders" onClick={() => setOpen(false)} className="text-white/70 hover:text-white font-medium py-2.5 border-b border-white/10 transition-colors flex items-center gap-2">
                 <ClipboardList size={14} /> My Orders
+              </Link>
+              <Link href="/account/requests" onClick={() => setOpen(false)} className="text-white/70 hover:text-white font-medium py-2.5 border-b border-white/10 transition-colors flex items-center gap-2">
+                <PackageSearch size={14} /> My requests / <span dir="rtl">طلباتي</span>
               </Link>
               <button onClick={handleSignOut} className="text-red-400 hover:text-red-300 font-medium py-2.5 text-left flex items-center gap-2 transition-colors">
                 <LogOut size={14} /> Sign Out

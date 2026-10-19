@@ -21,7 +21,7 @@ export function useStaffRole(): StaffInfo {
 }
 
 // Routes a sales user may open; everything else under /admin is admin-only.
-export const SALES_ROUTES = ["/admin", "/admin/follow-ups", "/admin/customers", "/admin/orders", "/admin/inquiries"];
+export const SALES_ROUTES = ["/admin", "/admin/follow-ups", "/admin/sourcing", "/admin/customers", "/admin/orders", "/admin/inquiries"];
 
 export function canAccess(role: StaffRole, pathname: string) {
   if (role === "admin") return true;

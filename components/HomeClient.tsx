@@ -664,6 +664,31 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
         </div>
       </section>
 
+      {/* ── BEAT MY INVOICE (Sourcing Desk) ──────────────────────────────── */}
+      <section className="bg-white border-t border-gray-100 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Link
+            href="/sourcing/new?tab=invoice"
+            className="group flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl bg-[#1B4D2E] text-white px-6 py-5 hover:bg-[#163d24] transition-colors"
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-lg font-bold">
+                Beat my invoice <span className="opacity-60">/</span> <span dir="rtl">قارن فاتورتك</span>
+              </p>
+              <p className="text-sm text-white/80 mt-0.5">
+                Upload your current supplier invoice. We&apos;ll send you our price line by line, the same day.
+              </p>
+              <p className="text-sm text-white/60 mt-0.5" dir="rtl">
+                ارفع فاتورة موردك الحالي، وهنبعتلك سعرنا صنف بصنف في نفس اليوم.
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 self-start sm:self-center bg-white text-[#1B4D2E] text-sm font-bold px-5 py-2.5 rounded-full group-hover:bg-gray-100">
+              Upload invoice <ArrowRight size={15} />
+            </span>
+          </Link>
+        </div>
+      </section>
+
       {/* ── WHY MASS DISTRIBUTION ────────────────────────────────────────── */}
       <section className="bg-[#F7F7F5] border-t border-gray-100 py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
