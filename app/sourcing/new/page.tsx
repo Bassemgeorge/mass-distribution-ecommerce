@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { AlertCircle, CheckCircle2, FileText, Loader2, Paperclip, Search, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRequireLogin } from "@/lib/useRequireLogin";
+import { useActiveCompany } from "@/context/ActiveCompanyContext";
 import {
   ACCEPTED_FILE_TYPES,
   MAX_FILES,
@@ -56,6 +57,11 @@ function PolicyBox() {
 
 function SourcingNewContent() {
   const { user, loading } = useRequireLogin();
+  const { companies, activeCompany } = useActiveCompany();
+  const multiCompany = companies.length > 1;
+  // Group buyers pick the company; default to the one currently chosen in the header
+  const [companyChoice, setCompanyChoice] = useState<string | null>(null);
+  const companyId = companyChoice ?? activeCompany?.id ?? companies[0]?.id ?? "";
   const params = useSearchParams();
   const initialTab: Tab = params.get("tab") === "invoice" ? "invoice" : "item";
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -102,6 +108,10 @@ function SourcingNewContent() {
       setError("Please attach your supplier invoice (photo or PDF). / برجاء رفع فاتورة المورد (صورة أو PDF).");
       return;
     }
+    if (multiCompany && !companyId) {
+      setError("Please choose the company. / برجاء اختيار الشركة.");
+      return;
+    }
 
     setSubmitting(true);
     const paths: string[] = [];
@@ -125,6 +135,7 @@ function SourcingNewContent() {
         p_details: details.trim(),
         p_quantity: tab === "item" ? quantity.trim() : "",
         p_attachments: paths,
+        p_customer: companyId || null,
       });
       if (rpcErr) throw new Error(rpcErr.message);
       setDone(data as { id: string; ref: string; due_at: string });
@@ -212,6 +223,27 @@ function SourcingNewContent() {
         </div>
 
         <form onSubmit={submit} className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+          {multiCompany && (
+            <label className="block">
+              <span className="block text-xs font-semibold text-gray-600 mb-1.5">
+                For which company? · <span dir="rtl">لأي شركة؟</span> <span className="text-red-400">*</span>
+              </span>
+              <select
+                value={companyId}
+                onChange={(e) => setCompanyChoice(e.target.value)}
+                dir="auto"
+                required
+                className={inp}
+              >
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.business_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           {tab === "item" ? (
             <>
               <label className="block">

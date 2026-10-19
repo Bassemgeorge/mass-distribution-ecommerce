@@ -10,7 +10,7 @@ import SourcingStatusPill from "@/components/SourcingStatusPill";
 import { OPEN_STATUSES, formatCairo, formatCairoDate, kindLabel } from "@/lib/sourcing";
 
 // Customer-safe columns only (no handler, internal notes or costs)
-const COLUMNS = "id, ref, kind, details, status, created_at, due_at, quote_expires_at";
+const COLUMNS = "id, ref, kind, details, status, created_at, due_at, quote_expires_at, customer_id";
 
 interface RequestRow {
   id: string;
@@ -21,12 +21,15 @@ interface RequestRow {
   created_at: string;
   due_at: string | null;
   quote_expires_at: string | null;
+  customer_id: string;
 }
 
 export default function MyRequestsPage() {
   const { user } = useRequireLogin();
   const { companies, loading: companiesLoading } = useActiveCompany();
   const companyIdsKey = companies.map((c) => c.id).join(",");
+  const multiCompany = companies.length > 1;
+  const companyName = (id: string) => companies.find((c) => c.id === id)?.business_name ?? "—";
   const [rows, setRows] = useState<RequestRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,6 +114,11 @@ export default function MyRequestsPage() {
                         · {kind.en} / <span dir="rtl">{kind.ar}</span>
                       </span>
                     </div>
+                    {multiCompany && (
+                      <p className="text-xs font-medium text-[#1B4D2E] truncate mt-1" dir="auto">
+                        <span className="text-gray-400 font-normal">Company · الشركة:</span> {companyName(r.customer_id)}
+                      </p>
+                    )}
                     <p className="text-sm text-gray-600 truncate mt-1" dir="auto">
                       {firstLine}
                     </p>

@@ -92,6 +92,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [request, setRequest] = useState<SourcingRequest | null>(null);
   const [lines, setLines] = useState<QuoteLine[]>([]);
   const [isCredit, setIsCredit] = useState(false);
+  const [companyName, setCompanyName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,10 +112,11 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     const req = r as SourcingRequest;
     const [linesRes, custRes] = await Promise.all([
       supabase.from("sourcing_quote_lines").select(LINE_COLUMNS).eq("request_id", id).order("line_no"),
-      supabase.from("customers").select("is_credit").eq("id", req.customer_id).maybeSingle(),
+      supabase.from("customers").select("is_credit, business_name").eq("id", req.customer_id).maybeSingle(),
     ]);
     setRequest(req);
     setLines((linesRes.data as QuoteLine[]) ?? []);
+    setCompanyName(custRes.data?.business_name ?? null);
     const credit = custRes.data?.is_credit === true;
     setIsCredit(credit);
     setPayment(credit ? "credit" : "cash");
@@ -210,8 +212,18 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           </Link>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold font-mono">{request.ref}</h1>
+            {companyName && (
+              <span className="text-sm font-semibold bg-white/10 border border-white/20 rounded-full px-3 py-1" dir="auto">
+                {companyName}
+              </span>
+            )}
             <SourcingStatusPill status={request.status} />
           </div>
+          {companyName && (
+            <p className="text-gray-400 text-xs mt-2">
+              For · <span dir="rtl">باسم</span> <span className="text-white font-medium" dir="auto">{companyName}</span> — the order will be placed for this company.
+            </p>
+          )}
           <p className="text-gray-400 text-sm mt-1">
             {kind.en} / <span dir="rtl">{kind.ar}</span> · {formatCairo(request.created_at)}
           </p>
