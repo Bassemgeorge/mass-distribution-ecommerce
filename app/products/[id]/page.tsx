@@ -7,6 +7,7 @@ import ProductImage from "@/components/ProductImage";
 import ProductCard from "@/components/ProductCard";
 import { getProductById, getProducts, toProduct, availabilityRank, MappedProduct } from "@/lib/db";
 import { ComingSoonPill, NotifyMeLink, SoldOutPill, UnavailableButton } from "@/components/ProductAvailability";
+import { track } from "@/lib/track";
 import { useCart } from "@/lib/cartStore";
 import { useAuth } from "@/context/AuthContext";
 import { ShoppingCart, Check, ArrowLeft, Lock, Package, Zap, Shield, AlertCircle } from "lucide-react";
@@ -60,6 +61,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
       const mapped = toProduct(data);
       setProduct(mapped);
+      track("view_product", { product_id: mapped.id, brand: mapped.brand });
 
       const { data: relDb } = await getProducts({
         category: data.category,
@@ -86,6 +88,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     for (let i = 0; i < qty; i++) {
       add(product);
     }
+    track("add_to_cart", { product_id: product.id, cartons: qty });
 
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);

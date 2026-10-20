@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { looksLikePhone } from "@/lib/identity";
+import { track } from "@/lib/track";
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 
 const PHONE_ERROR = "Wrong mobile number or password / رقم الموبايل أو كلمة السر غير صحيحة";
@@ -63,6 +64,7 @@ export default function LoginPage() {
         setError(err.includes("Invalid") ? "Incorrect email or password." : err);
         setSub(false);
       } else {
+        track("login");
         router.push(nextPath);
       }
       return;
@@ -90,6 +92,7 @@ export default function LoginPage() {
         setSub(false);
         return;
       }
+      track("login");
       router.push(nextPath);
     } catch {
       setError("Something went wrong. Please try again.");

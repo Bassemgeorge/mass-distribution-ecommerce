@@ -6,6 +6,11 @@ import { ActiveCompanyProvider } from "@/context/ActiveCompanyContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SiteAnalytics from "@/components/SiteAnalytics";
+import AnalyticsBridge from "@/components/AnalyticsBridge";
+import Script from "next/script";
+
+// Google Analytics 4 is optional: it only loads when NEXT_PUBLIC_GA_ID is set.
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
   title: "Mass Distribution — HORECA Supplies Egypt",
@@ -34,6 +39,22 @@ export default function RootLayout({
           </ActiveCompanyProvider>
         </AuthProvider>
         <SiteAnalytics />
+        <AnalyticsBridge />
+        {GA_ID && (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_ID)}`} strategy="afterInteractive" />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+window.gtag = gtag;
+gtag('js', new Date());
+var cfg = {};
+// staff sourcing links carry a secret token in the query string; report the path only
+if (/^\\/sourcing\\/(quote|approve)/.test(location.pathname)) { cfg.page_location = location.origin + location.pathname; }
+gtag('config', ${JSON.stringify(GA_ID)}, cfg);`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );

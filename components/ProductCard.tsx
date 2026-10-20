@@ -7,6 +7,7 @@ import ProductImage from "./ProductImage";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { formatSize } from "@/lib/db";
+import { track } from "@/lib/track";
 import { ComingSoonPill, NotifyMeLink, SoldOutPill, UnavailableButton } from "@/components/ProductAvailability";
 
 interface Props {
@@ -68,6 +69,7 @@ export default function ProductCard({ product }: Props) {
   function handleAdd(e: React.MouseEvent) {
     e.preventDefault();
     add(product);
+    track("add_to_cart", { product_id: product.id, cartons: 1 });
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1500);
   }

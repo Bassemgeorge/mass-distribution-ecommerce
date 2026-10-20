@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { CheckCircle, MessageCircle, ArrowRight, Package } from "lucide-react";
 import { CREDIT_PAYMENT_LABEL, CreditStatusNote, CreditStatusPill } from "@/components/CreditStatus";
+import { ReorderButton, useReorder } from "@/components/reorder/useReorder";
 
 const CREDIT_POLL_MS = 10_000;
 const CREDIT_POLL_MAX = 12; // 2 minutes
@@ -36,6 +37,7 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { startReorder, busyOrder, ui: reorderUi } = useReorder();
 
   useEffect(() => {
     async function load() {
@@ -234,7 +236,13 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
             Continue Shopping <ArrowRight size={16} />
           </Link>
         </div>
+        {order.status !== "cancelled" && (
+          <div className="mt-3">
+            <ReorderButton orderId={order.id} startReorder={startReorder} busy={busyOrder === order.id} className="w-full py-3 text-sm rounded-xl" />
+          </div>
+        )}
       </div>
+      {reorderUi}
     </div>
   );
 }

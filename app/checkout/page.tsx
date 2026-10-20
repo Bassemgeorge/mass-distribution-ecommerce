@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense, useEffect, useRef } from "react";
 import { useCart } from "@/lib/cartStore";
 import { useAuth } from "@/context/AuthContext";
 import { useActiveCompany } from "@/context/ActiveCompanyContext";
 import { UNAVAILABLE_REMOVED_MSG, useCartAvailability } from "@/components/ProductAvailability";
 import { MIN_ORDER_PROMO_NOTE, getMinOrderTotal, isMinOrderPromoActive } from "@/lib/orderRules";
+import { clearOrderVia, orderSource, signupSource } from "@/lib/source";
+import { track } from "@/lib/track";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -57,6 +59,14 @@ function CheckoutContent() {
   // Checked against the subtotal before the first-order discount
   const MIN_ORDER_TOTAL = getMinOrderTotal();
   const minOrderPromo = isMinOrderPromoActive();
+
+  // begin_checkout once per visit, after the cart has loaded
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || count === 0) return;
+    checkoutTracked.current = true;
+    track("begin_checkout", { cart_value: Math.round(total * 100) / 100 });
+  }, [count, total]);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -159,6 +169,7 @@ useEffect(() => {
             phone: form.phone,
             email: user.email ?? null,
             address: joinAddress(form.address, form.area),
+            signup_source: signupSource(),
           })
           .select("id")
           .single();
@@ -174,6 +185,7 @@ useEffect(() => {
           business_name: form.businessName,
           phone: form.phone,
           address: joinAddress(form.address, form.area),
+          signup_source: signupSource(),
         })
         .select("id")
         .single();
@@ -183,7 +195,8 @@ useEffect(() => {
       customerId = (newCustomer as { id: string }).id;
     }
 
-    // 2 — insert order
+    // 2 — insert order (with where the customer came from and whether the cart was a reorder)
+    const source = orderSource();
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .insert({
@@ -194,6 +207,7 @@ useEffect(() => {
         // for credit the database also forces payment_status = 'unpaid' and credit_status = 'checking'
         payment_status: form.paymentMethod === "paymob" ? "pending" : "unpaid",
         notes: [form.notes, `Payment: ${form.paymentMethod}`].filter(Boolean).join(" | ") || null,
+        source,
       })
       .select("id")
       .single();
@@ -212,6 +226,14 @@ useEffect(() => {
 
     const { error: itemErr } = await supabase.from("order_items").insert(itemRows);
     if (itemErr) throw new Error(itemErr.message);
+
+    track("purchase", {
+      order_ref: order.id.slice(0, 8).toUpperCase(),
+      value: Math.round(totalInclVat * 100) / 100,
+      payment_method: form.paymentMethod,
+      via: source.via,
+    });
+    clearOrderVia();
 
     // 4 — if Paymob, create payment intention and redirect
     if (form.paymentMethod === "paymob") {

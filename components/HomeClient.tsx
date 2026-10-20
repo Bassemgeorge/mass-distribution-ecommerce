@@ -11,6 +11,7 @@ import {
 import { toProduct } from "@/lib/db";
 import HeroCarousel from "@/components/HeroCarousel";
 import SmallOrdersBanner from "@/components/SmallOrdersBanner";
+import OrderAgainStrip from "@/components/reorder/OrderAgainStrip";
 
 // ── Promo carousel ────────────────────────────────────────────────────────────
 const SALE_END = new Date("2026-09-07T09:00:00+03:00"); // Cairo time
@@ -424,6 +425,9 @@ export default function HomeClient({ featured, totalCount, categoryCounts }: Hom
       <section className="bg-white border-b border-gray-100 py-7 px-4 shadow-sm">
         <HomeSearchBar />
       </section>
+
+      {/* ── ORDER AGAIN (signed-in customers with orders) ────────────────── */}
+      <OrderAgainStrip />
 
       {/* ── STATS STRIP ──────────────────────────────────────────────────── */}
       <section className="bg-white border-t-2 border-[#1B4D2E] border-b border-gray-100">

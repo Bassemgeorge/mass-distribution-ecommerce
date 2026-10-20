@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { signupSource } from "./source";
 
 export interface SignUpData {
   email: string;
@@ -26,6 +27,7 @@ export async function signUp(data: SignUpData) {
     phone:         data.phone,
     email:         data.email,
     address:       data.area,
+    signup_source: signupSource(),
   });
   if (custError) console.error("Customer profile error:", custError.message);
 

@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { track } from "@/lib/track";
+import { getFirstTouch } from "@/lib/source";
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 
 const AREAS = ["Cairo", "Giza", "Alexandria", "New Cairo", "Sheikh Zayed", "6th of October", "Other"];
@@ -55,6 +57,8 @@ export default function RegisterPage() {
       businessName: form.businessName, contactName: form.contactName,
       phone: form.phone, area: form.area, customerType: form.customerType,
     });
+
+    if (!err) track("sign_up", { source: getFirstTouch()?.utm_source ?? "direct" });
 
     if (err) {
       setError(err.includes("already registered") ? "An account with this email already exists." : err);

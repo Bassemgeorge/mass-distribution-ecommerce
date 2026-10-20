@@ -7,6 +7,7 @@ import { Trash2, ArrowRight, ShoppingBag } from "lucide-react";
 import ProductImage from "@/components/ProductImage";
 import { useCartAvailability } from "@/components/ProductAvailability";
 import { MIN_ORDER_PROMO_NOTE, getMinOrderTotal, isMinOrderPromoActive } from "@/lib/orderRules";
+import { ReorderNotice, ReorderNoticeText, takeReorderNotice } from "@/components/reorder/useReorder";
 
 // Typeable quantity input — lets B2B buyers enter large carton counts directly
 // instead of clicking +/- repeatedly. Falls back to 1 on blur if left invalid.
@@ -47,6 +48,10 @@ function QtyInput({ quantity, onChange }: { quantity: number; onChange: (q: numb
 export default function CartPage() {
 const { items, remove, update, total, count, vatTotal, totalInclVat } = useCart();
 const { toast: availabilityToast } = useCartAvailability();
+const [reorderNotice, setReorderNotice] = useState<ReorderNotice | null>(null);
+useEffect(() => {
+  setReorderNotice(takeReorderNotice());
+}, []);
 const [notes, setNotes] = useState("");
 const MIN_ORDER_TOTAL = getMinOrderTotal();
 const minOrderPromo = isMinOrderPromoActive();
@@ -83,6 +88,16 @@ const belowMinimum = total < MIN_ORDER_TOTAL;
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {reorderNotice && (
+          <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="flex-1">
+              <ReorderNoticeText notice={reorderNotice} />
+            </div>
+            <button onClick={() => setReorderNotice(null)} className="text-amber-700 hover:text-amber-900 text-xs font-semibold">
+              ✕
+            </button>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Items list */}
           <div className="lg:col-span-2 space-y-3">

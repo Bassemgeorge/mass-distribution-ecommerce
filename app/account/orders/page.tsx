@@ -8,6 +8,7 @@ import { useActiveCompany } from "@/context/ActiveCompanyContext";
 import { supabase } from "@/lib/supabase";
 import { ShoppingBag, ChevronDown, ChevronUp, Loader2, ArrowLeft } from "lucide-react";
 import { CREDIT_PAYMENT_LABEL, CreditStatusNote, CreditStatusPill } from "@/components/CreditStatus";
+import { ReorderButton, useReorder } from "@/components/reorder/useReorder";
 
 interface OrderItem {
   id: string;
@@ -51,6 +52,7 @@ export default function OrdersPage() {
   const [loadingItems, setLoadingItems] = useState<string | null>(null);
 
   const multiCompany = companies.length > 1;
+  const { startReorder, busyOrder, ui: reorderUi } = useReorder();
   const companyName = (id: string) => companies.find((c) => c.id === id)?.business_name ?? "—";
   const companyIdsKey = companies.map((c) => c.id).join(",");
 
@@ -195,9 +197,18 @@ export default function OrdersPage() {
             {filtered.map((order) => (
               <div key={order.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 {/* Order row */}
-                <button
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggleExpand(order.id)}
-                  className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors text-left"
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleExpand(order.id);
+                    }
+                  }}
+                  className="w-full flex flex-wrap items-center justify-between gap-3 px-6 py-4 hover:bg-gray-50 transition-colors text-left cursor-pointer"
                 >
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 min-w-0">
                     <div>
@@ -221,10 +232,13 @@ export default function OrdersPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-4">
+                    {order.status !== "cancelled" && (
+                      <ReorderButton orderId={order.id} startReorder={startReorder} busy={busyOrder === order.id} />
+                    )}
                     <span className="text-sm font-bold text-[#111111]">EGP {(order.total ?? 0).toLocaleString()}</span>
                     {expanded === order.id ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
                   </div>
-                </button>
+                </div>
 
                 {/* Expanded items */}
                 {expanded === order.id && (
@@ -293,6 +307,7 @@ export default function OrdersPage() {
           </div>
         )}
       </div>
+      {reorderUi}
     </div>
   );
 }

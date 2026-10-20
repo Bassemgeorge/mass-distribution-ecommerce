@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useRef, ReactNode } from "react";
+import { clearOrderVia } from "@/lib/source";
 
 // ── Cart item shape ────────────────────────────────────────────────────────────
 // Uses only the fields we need — compatible with both Product and MappedProduct.
@@ -114,12 +115,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Persist to localStorage on every change
+  const firstPersist = useRef(true);
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
     } catch {
       // ignore storage errors (private mode, quota exceeded)
     }
+    // An emptied cart is no longer a reorder (skip the first run, before the saved cart is restored)
+    if (firstPersist.current) firstPersist.current = false;
+    else if (state.items.length === 0) clearOrderVia();
   }, [state.items]);
 
   const total = state.items.reduce((sum, i) => sum + i.product.pricePerCarton * i.quantity, 0);

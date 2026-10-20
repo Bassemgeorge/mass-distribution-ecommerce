@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense, useMemo } from "react";
+import { useState, useEffect, useRef, Suspense, useMemo } from "react";
+import { track } from "@/lib/track";
 import { useRouter, useSearchParams } from "next/navigation";
 import Fuse from "fuse.js";
 import ProductCard from "@/components/ProductCard";
@@ -357,6 +358,19 @@ function ProductsContent() {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [basePool, activeFacets, facetParams.type, facetParams.line, facetParams.pack, facetParams.size, hasLineSort, search]);
+
+  // Search is live as you type: report once typing pauses, with the result count only (never the query text)
+  const lastTrackedSearch = useRef("");
+  const resultCount = filtered.length;
+  useEffect(() => {
+    const q = search.trim();
+    if (!q || loading || q === lastTrackedSearch.current) return;
+    const t = window.setTimeout(() => {
+      lastTrackedSearch.current = q;
+      track("search", { results: resultCount });
+    }, 1200);
+    return () => window.clearTimeout(t);
+  }, [search, resultCount, loading]);
 
   const activeFacetTags = activeFacets.filter((f) => facetParams[f.key]);
   // Product-line data replaces the generic brand chips (with ≥2 lines the Brand dropdown takes over;

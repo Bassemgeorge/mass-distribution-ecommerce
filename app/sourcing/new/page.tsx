@@ -7,6 +7,7 @@ import { AlertCircle, CheckCircle2, FileText, Loader2, Paperclip, Search, X } fr
 import { supabase } from "@/lib/supabase";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { useActiveCompany } from "@/context/ActiveCompanyContext";
+import { track } from "@/lib/track";
 import {
   ACCEPTED_FILE_TYPES,
   MAX_FILES,
@@ -138,6 +139,7 @@ function SourcingNewContent() {
         p_customer: companyId || null,
       });
       if (rpcErr) throw new Error(rpcErr.message);
+      track("sourcing_submit", { kind: tab });
       setDone(data as { id: string; ref: string; due_at: string });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
