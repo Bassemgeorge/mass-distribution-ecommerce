@@ -4,7 +4,16 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Loader2, RefreshCw, X, CheckCircle, XCircle, Eye } from "lucide-react";
 import { useStaffRole } from "@/context/StaffRoleContext";
-import { ContactButtons, FollowUpTarget, LogFollowUpButton, LogFollowUpModal, useToast } from "@/components/admin/FollowUpUI";
+import {
+  ContactButtons,
+  CustomerDrawer,
+  FollowUpBadge,
+  FollowUpTarget,
+  LogFollowUpButton,
+  LogFollowUpModal,
+  useToast,
+} from "@/components/admin/FollowUpUI";
+import { timeAgo } from "@/lib/followups";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",
@@ -75,8 +84,36 @@ interface AdminOrder {
     name: string;
     phone: string;
     address: string;
+    follow_up_status: string | null;
+    follow_up_updated_by: string | null;
+    follow_up_updated_at: string | null;
   } | null;
   items?: OrderItem[];
+}
+
+/** Customer's follow-up badge + "who · when"; clicking opens the follow-up history. */
+function FollowUpCell({ order, onOpen }: { order: AdminOrder; onOpen: (customerId: string) => void }) {
+  const c = order.customers;
+  if (!c || !order.customer_id) return <span className="text-xs text-gray-300">—</span>;
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(order.customer_id)}
+      className="text-left"
+      title="Open follow-up history"
+    >
+      {c.follow_up_status === "internal" ? (
+        <span className="text-xs text-gray-400">Staff/test</span>
+      ) : (
+        <FollowUpBadge status={c.follow_up_status} />
+      )}
+      {c.follow_up_updated_at && (
+        <span className="block text-[11px] text-gray-400 mt-0.5 whitespace-nowrap">
+          {c.follow_up_updated_by ?? "—"} · {timeAgo(c.follow_up_updated_at)}
+        </span>
+      )}
+    </button>
+  );
 }
 
 function formatLabel(value: string | null | undefined) {
@@ -132,6 +169,7 @@ export default function AdminOrdersPage() {
   const { role } = useStaffRole();
   const canEdit = role === "admin";
   const [logging, setLogging] = useState<{ customer: FollowUpTarget; orderId: string } | null>(null);
+  const [drawerCustomerId, setDrawerCustomerId] = useState<string | null>(null);
   const { toast, showToast } = useToast();
 
   function openFollowUp(o: AdminOrder) {
@@ -141,14 +179,15 @@ export default function AdminOrdersPage() {
     });
   }
 
-  const load = useCallback(async () => {
-    setLoad(true);
+  // quiet = refresh in place (no spinner), e.g. after logging a follow-up
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoad(true);
     setError(null);
 
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id, created_at, total, status, notes, customer_id, payment_method, payment_status, paymob_transaction_id, credit_status, odoo_order_name, order_credit_info(credit_check, decided_by, decision_note), customers(business_name, name, phone, address)"
+        "id, created_at, total, status, notes, customer_id, payment_method, payment_status, paymob_transaction_id, credit_status, odoo_order_name, order_credit_info(credit_check, decided_by, decision_note), customers(business_name, name, phone, address, follow_up_status, follow_up_updated_by, follow_up_updated_at)"
       )
       .order("created_at", { ascending: false });
 
@@ -236,7 +275,7 @@ export default function AdminOrdersPage() {
         </div>
 
         <button
-          onClick={load}
+          onClick={() => load()}
           disabled={loading}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#1B4D2E] transition-colors"
         >
@@ -292,12 +331,13 @@ export default function AdminOrdersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
-                  {["Order #", "Customer", "Date", "Total", "Payment", "Status", "Actions"].map((h) => (
+                  {["Order #", "Customer", "Date", "Total", "Payment", "Status", "Follow-up", "Actions"].map((h) => (
                     <th
                       key={h}
+                      title={h === "Status" ? "Order status (changed by admin)" : undefined}
                       className={`px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide ${
                         h === "Total" || h === "Actions" ? "text-right" : "text-left"
-                      } ${h === "Date" ? "hidden sm:table-cell" : ""}`}
+                      } ${h === "Date" ? "hidden sm:table-cell" : ""} ${h === "Follow-up" ? "hidden md:table-cell" : ""}`}
                     >
                       {h}
                     </th>
@@ -367,12 +407,21 @@ export default function AdminOrdersPage() {
 
                       <td className="px-4 py-3">
                         <span
+                          title="Order status (changed by admin)"
                           className={`text-xs font-medium px-2 py-1 rounded-full border ${
                             STATUS_COLORS[o.status] ?? "bg-gray-50 text-gray-500 border-gray-200"
                           }`}
                         >
                           {formatLabel(o.status)}
                         </span>
+                        {/* on small screens the follow-up badge sits under the order status */}
+                        <div className="md:hidden mt-2">
+                          <FollowUpCell order={o} onOpen={setDrawerCustomerId} />
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <FollowUpCell order={o} onOpen={setDrawerCustomerId} />
                       </td>
 
                       <td className="px-4 py-3">
@@ -706,8 +755,12 @@ export default function AdminOrdersPage() {
           onSaved={() => {
             setLogging(null);
             showToast("Follow-up saved");
+            load(true);
           }}
         />
+      )}
+      {drawerCustomerId && (
+        <CustomerDrawer customerId={drawerCustomerId} onClose={() => setDrawerCustomerId(null)} onChanged={() => load(true)} />
       )}
       {toast}
     </div>

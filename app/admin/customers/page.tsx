@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Search, Loader2, ChevronDown, ChevronUp, ShoppingBag } from "lucide-react";
 import {
   CreditBadge,
+  CustomerDrawer,
   FollowUpBadge,
   LogFollowUpButton,
   LogFollowUpModal,
@@ -53,6 +54,7 @@ export default function AdminCustomersPage() {
   const [showInternal, setShowInternal] = useState(false);
   const [creditOnly, setCreditOnly] = useState(false);
   const [logging, setLogging]     = useState<Customer | null>(null);
+  const [drawerId, setDrawerId]   = useState<string | null>(null);
   const { toast, showToast }      = useToast();
 
   const load = useCallback(async () => {
@@ -181,7 +183,16 @@ export default function AdminCustomersPage() {
                     )}
                   </div>
                   <div className="flex flex-shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center">
-                    <FollowUpBadge status={c.follow_up_status} />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDrawerId(c.id);
+                      }}
+                      title="Open follow-up history"
+                    >
+                      <FollowUpBadge status={c.follow_up_status} />
+                    </button>
                     {c.follow_up_status !== "internal" && <LogFollowUpButton onClick={() => setLogging(c)} label="Log" />}
                     {c.is_credit && (
                       <SetupLinkButton
@@ -257,6 +268,7 @@ export default function AdminCustomersPage() {
           }}
         />
       )}
+      {drawerId && <CustomerDrawer customerId={drawerId} onClose={() => setDrawerId(null)} onChanged={load} />}
       {toast}
     </div>
   );

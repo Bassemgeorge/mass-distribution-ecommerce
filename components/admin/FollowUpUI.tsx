@@ -17,7 +17,8 @@ import {
   whatsappLink,
 } from "@/lib/followups";
 import { displayEmail } from "@/lib/identity";
-import { AlertCircle, CheckCircle, ClipboardList, KeyRound, Loader2, MessageCircle, Phone, X } from "lucide-react";
+import { useStaffRole } from "@/context/StaffRoleContext";
+import { AlertCircle, CheckCircle, ClipboardList, KeyRound, Loader2, MessageCircle, Pencil, Phone, Trash2, X } from "lucide-react";
 
 // ── Badge ────────────────────────────────────────────────────────────────────
 export function FollowUpBadge({ status }: { status: string | null | undefined }) {
@@ -203,22 +204,38 @@ export interface FollowUpTarget {
   name: string | null;
 }
 
+export interface FollowUpEntry {
+  id: number;
+  status: string;
+  channel: string | null;
+  note: string | null;
+  next_follow_up_date: string | null;
+  order_id: string | null;
+}
+
 export function LogFollowUpModal({
   customer,
   defaultOrderId = null,
+  editing = null,
   onClose,
   onSaved,
 }: {
   customer: FollowUpTarget;
   defaultOrderId?: string | null;
+  /** When set, the modal edits this existing log instead of adding a new one. */
+  editing?: FollowUpEntry | null;
   onClose: () => void;
   onSaved: (status: Result) => void;
 }) {
-  const [result, setResult] = useState<Result>("contacted");
-  const [channel, setChannel] = useState<FollowUpChannel>("call");
-  const [note, setNote] = useState("");
-  const [nextDate, setNextDate] = useState(cairoDate(1));
-  const [orderId, setOrderId] = useState<string>(defaultOrderId ?? "");
+  const [result, setResult] = useState<Result>(
+    editing && (RESULTS as readonly string[]).includes(editing.status) ? (editing.status as Result) : "contacted"
+  );
+  const [channel, setChannel] = useState<FollowUpChannel>(
+    editing?.channel && editing.channel in CHANNEL_LABELS ? (editing.channel as FollowUpChannel) : "call"
+  );
+  const [note, setNote] = useState(editing?.note ?? "");
+  const [nextDate, setNextDate] = useState(editing?.next_follow_up_date ?? cairoDate(1));
+  const [orderId, setOrderId] = useState<string>(editing ? (editing.order_id ?? "") : (defaultOrderId ?? ""));
   const [orders, setOrders] = useState<OrderOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -244,20 +261,28 @@ export function LogFollowUpModal({
     }
 
     setSaving(true);
-    const { data: userData } = await supabase.auth.getUser();
-    const { error: insertError } = await supabase.from("customer_followups").insert({
-      customer_id: customer.id,
+    const fields = {
       order_id: orderId || null,
       status: result,
       channel,
       note: note.trim() || null,
       next_follow_up_date: result === "call_back" ? nextDate : null,
-      created_by: userData.user?.id,
-    });
+    };
+    let saveError: { message: string } | null;
+    if (editing) {
+      // edited_at / edited_by_name and the customer's status are set by database triggers
+      const { data, error } = await supabase.from("customer_followups").update(fields).eq("id", editing.id).select("id");
+      saveError = error ?? (data && data.length === 0 ? { message: "You can only edit your own follow-ups." } : null);
+    } else {
+      const { data: userData } = await supabase.auth.getUser();
+      ({ error: saveError } = await supabase
+        .from("customer_followups")
+        .insert({ ...fields, customer_id: customer.id, created_by: userData.user?.id }));
+    }
     setSaving(false);
 
-    if (insertError) {
-      setError(insertError.message);
+    if (saveError) {
+      setError(saveError.message);
       return;
     }
     onSaved(result);
@@ -270,7 +295,7 @@ export function LogFollowUpModal({
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100">
           <div className="min-w-0">
-            <h2 className="font-bold text-[#111111]">Log follow-up</h2>
+            <h2 className="font-bold text-[#111111]">{editing ? "Edit follow-up" : "Log follow-up"}</h2>
             <p className="text-xs text-gray-400 truncate" dir="auto">
               {customer.business_name ?? "—"} · {customer.name ?? ""}
             </p>
@@ -401,6 +426,9 @@ interface FollowUpRow {
   note: string | null;
   next_follow_up_date: string | null;
   created_by_name: string | null;
+  created_by: string | null;
+  edited_at: string | null;
+  edited_by_name: string | null;
   order_id: string | null;
 }
 
@@ -418,7 +446,27 @@ export function CustomerDrawer({
   const [history, setHistory] = useState<FollowUpRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [logging, setLogging] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<FollowUpRow | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { toast, showToast } = useToast();
+  const { role, userId } = useStaffRole();
+  // Sales can change their own entries; admins can change any (the database enforces the same rule)
+  const canChange = (h: FollowUpRow) => role === "admin" || (!!h.created_by && h.created_by === userId);
+
+  async function deleteEntry(id: number) {
+    setDeleting(true);
+    const { data, error } = await supabase.from("customer_followups").delete().eq("id", id).select("id");
+    setDeleting(false);
+    setConfirmDeleteId(null);
+    if (error || !data || data.length === 0) {
+      showToast(error?.message ?? "You can only delete your own follow-ups.", { error: true });
+      return;
+    }
+    showToast("Follow-up deleted");
+    load();
+    onChanged();
+  }
 
   const load = useCallback(async () => {
     const [c, o, h] = await Promise.all([
@@ -436,7 +484,7 @@ export function CustomerDrawer({
         .order("created_at", { ascending: false }),
       supabase
         .from("customer_followups")
-        .select("id, created_at, status, channel, note, next_follow_up_date, created_by_name, order_id")
+        .select("id, created_at, status, channel, note, next_follow_up_date, created_by_name, created_by, edited_at, edited_by_name, order_id")
         .eq("customer_id", customerId)
         .order("created_at", { ascending: false }),
     ]);
@@ -551,6 +599,36 @@ export function CustomerDrawer({
                           {h.order_id && <>· Order #{h.order_id.slice(0, 8).toUpperCase()}</>}
                         </p>
                       )}
+                      {h.edited_at && (
+                        <p className="text-[11px] text-gray-400 italic mt-1">
+                          edited{h.edited_by_name ? ` by ${h.edited_by_name}` : ""} · {timeAgo(h.edited_at)}
+                        </p>
+                      )}
+                      {canChange(h) &&
+                        (confirmDeleteId === h.id ? (
+                          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs">
+                            <span className="font-semibold text-red-700">Delete this follow-up?</span>
+                            <button
+                              onClick={() => deleteEntry(h.id)}
+                              disabled={deleting}
+                              className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 font-semibold text-white disabled:opacity-60"
+                            >
+                              {deleting && <Loader2 size={11} className="animate-spin" />} Delete
+                            </button>
+                            <button onClick={() => setConfirmDeleteId(null)} disabled={deleting} className="px-2 py-1 text-gray-600">
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-2 flex gap-3 text-xs font-semibold">
+                            <button onClick={() => setEditingEntry(h)} className="inline-flex items-center gap-1 text-[#1B4D2E] hover:underline">
+                              <Pencil size={11} /> Edit
+                            </button>
+                            <button onClick={() => setConfirmDeleteId(h.id)} className="inline-flex items-center gap-1 text-red-600 hover:underline">
+                              <Trash2 size={11} /> Delete
+                            </button>
+                          </div>
+                        ))}
                     </li>
                   ))}
                 </ol>
@@ -568,6 +646,19 @@ export function CustomerDrawer({
           onSaved={() => {
             setLogging(false);
             showToast("Follow-up saved");
+            load();
+            onChanged();
+          }}
+        />
+      )}
+      {editingEntry && customer && (
+        <LogFollowUpModal
+          customer={customer}
+          editing={editingEntry}
+          onClose={() => setEditingEntry(null)}
+          onSaved={() => {
+            setEditingEntry(null);
+            showToast("Follow-up updated");
             load();
             onChanged();
           }}
