@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { STAFF_ROLES, StaffRole, homeFor } from "@/context/StaffRoleContext";
 
 const inputClass =
   "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-gray-300 focus:border-[#1B4D2E] focus:ring-2 focus:ring-[#1B4D2E]/15 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500";
@@ -40,8 +41,8 @@ export default function AdminLoginPage() {
 
         if (cancelled || roleError) return;
 
-        if (role === "admin" || role === "sales") {
-          router.replace(role === "sales" ? "/admin/follow-ups" : "/admin");
+        if (STAFF_ROLES.includes(role as StaffRole)) {
+          router.replace(homeFor(role as StaffRole));
         } else if (deniedParam || role === null) {
           // Signed in, but not staff (e.g. a customer). Keep their session; just explain.
           setError("Access denied. This account is not an admin.");
@@ -90,13 +91,13 @@ export default function AdminLoginPage() {
         return;
       }
 
-      if (role !== "admin" && role !== "sales") {
+      if (!STAFF_ROLES.includes(role as StaffRole)) {
         await supabase.auth.signOut({ scope: "local" });
         setError("Access denied. This account is not an admin.");
         return;
       }
 
-      router.replace(role === "sales" ? "/admin/follow-ups" : "/admin");
+      router.replace(homeFor(role as StaffRole));
       router.refresh();
     } catch {
       await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);

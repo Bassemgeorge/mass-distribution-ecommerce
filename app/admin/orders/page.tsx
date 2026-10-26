@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { Loader2, RefreshCw, X, CheckCircle, XCircle, Eye } from "lucide-react";
+import { Loader2, RefreshCw, X, Eye } from "lucide-react";
 import { useStaffRole } from "@/context/StaffRoleContext";
+import { OrderHistory, OrderStatusControl, PaymentStatusControl, STATUS_COLORS } from "@/components/admin/OrderControls";
 import {
   ContactButtons,
   CustomerDrawer,
@@ -14,15 +15,6 @@ import {
   useToast,
 } from "@/components/admin/FollowUpUI";
 import { timeAgo } from "@/lib/followups";
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  confirmed: "bg-blue-50 text-blue-700 border-blue-200",
-  processing: "bg-purple-50 text-purple-700 border-purple-200",
-  delivered: "bg-green-50 text-[#1B4D2E] border-green-200",
-  cancelled: "bg-red-50 text-red-700 border-red-200",
-  payment_failed: "bg-red-50 text-red-700 border-red-200",
-};
 
 const PAYMENT_COLORS: Record<string, string> = {
   unpaid: "bg-gray-50 text-gray-600 border-gray-200",
@@ -164,10 +156,11 @@ export default function AdminOrdersPage() {
   const [filter, setFilter] = useState("All");
   const [modal, setModal] = useState<AdminOrder | null>(null);
   const [modalLoading, setML] = useState(false);
-  const [updating, setUpd] = useState<string | null>(null);
+  const [historyKey, setHistoryKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const { role } = useStaffRole();
   const canEdit = role === "admin";
+  const isAccounts = role === "accounts"; // accounts: payments only, no follow-ups or status changes
   const [logging, setLogging] = useState<{ customer: FollowUpTarget; orderId: string } | null>(null);
   const [drawerCustomerId, setDrawerCustomerId] = useState<string | null>(null);
   const { toast, showToast } = useToast();
@@ -206,25 +199,11 @@ export default function AdminOrdersPage() {
     load();
   }, [load]);
 
-  async function updateStatus(id: string, status: string) {
-    setUpd(id);
-
-    const { error } = await supabase.from("orders").update({ status }).eq("id", id);
-
-    if (error) {
-      console.error("Order status update error:", error.message);
-      setError(error.message);
-      setUpd(null);
-      return;
-    }
-
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
-
-    if (modal?.id === id) {
-      setModal((m) => (m ? { ...m, status } : null));
-    }
-
-    setUpd(null);
+  // Status/payment changes go through RPCs (which also write order_status_log); this just updates the screen
+  function applyChange(id: string, patch: Partial<Pick<AdminOrder, "status" | "payment_status">>) {
+    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, ...patch } : o)));
+    setModal((m) => (m && m.id === id ? { ...m, ...patch } : m));
+    setHistoryKey((k) => k + 1);
   }
 
   async function openModal(order: AdminOrder) {
@@ -331,7 +310,7 @@ export default function AdminOrdersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
-                  {["Order #", "Customer", "Date", "Total", "Payment", "Status", "Follow-up", "Actions"].map((h) => (
+                  {["Order #", "Customer", "Date", "Total", "Payment", "Status", ...(isAccounts ? [] : ["Follow-up"]), "Actions"].map((h) => (
                     <th
                       key={h}
                       title={h === "Status" ? "Order status (changed by admin)" : undefined}
@@ -386,90 +365,56 @@ export default function AdminOrdersPage() {
                             {getPaymentMethodLabel(o.payment_method)}
                           </span>
 
-                          {o.payment_method === "credit" ? (
+                          {o.payment_method === "credit" && (
                             <>
                               <CreditBadge status={o.credit_status} />
                               {o.odoo_order_name && (
                                 <span className="text-xs font-mono text-gray-500">Odoo {o.odoo_order_name}</span>
                               )}
                             </>
-                          ) : (
-                            <span
-                              className={`w-fit text-xs font-medium px-2 py-1 rounded-full border ${
-                                PAYMENT_COLORS[paymentStatus] ?? PAYMENT_COLORS.unpaid
-                              }`}
-                            >
-                              {formatLabel(paymentStatus)}
-                            </span>
                           )}
+                          <span
+                            className={`w-fit text-xs font-medium px-2 py-1 rounded-full border ${
+                              PAYMENT_COLORS[paymentStatus] ?? PAYMENT_COLORS.unpaid
+                            }`}
+                          >
+                            {formatLabel(paymentStatus)}
+                          </span>
+                          <PaymentStatusControl
+                            orderId={o.id}
+                            paymentMethod={o.payment_method}
+                            paymentStatus={o.payment_status}
+                            role={role}
+                            notify={showToast}
+                            onChanged={(payment_status) => applyChange(o.id, { payment_status })}
+                          />
                         </div>
                       </td>
 
                       <td className="px-4 py-3">
-                        <span
-                          title="Order status (changed by admin)"
-                          className={`text-xs font-medium px-2 py-1 rounded-full border ${
-                            STATUS_COLORS[o.status] ?? "bg-gray-50 text-gray-500 border-gray-200"
-                          }`}
-                        >
-                          {formatLabel(o.status)}
-                        </span>
+                        <OrderStatusControl
+                          orderId={o.id}
+                          status={o.status}
+                          role={role}
+                          notify={showToast}
+                          onChanged={(status) => applyChange(o.id, { status })}
+                        />
                         {/* on small screens the follow-up badge sits under the order status */}
-                        <div className="md:hidden mt-2">
-                          <FollowUpCell order={o} onOpen={setDrawerCustomerId} />
-                        </div>
+                        {!isAccounts && (
+                          <div className="md:hidden mt-2">
+                            <FollowUpCell order={o} onOpen={setDrawerCustomerId} />
+                          </div>
+                        )}
                       </td>
 
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <FollowUpCell order={o} onOpen={setDrawerCustomerId} />
-                      </td>
+                      {!isAccounts && (
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <FollowUpCell order={o} onOpen={setDrawerCustomerId} />
+                        </td>
+                      )}
 
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
-                          {canEdit && o.status === "pending" && (
-                            <>
-                              <button
-                                onClick={() => updateStatus(o.id, "confirmed")}
-                                disabled={updating === o.id}
-                                className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
-                              >
-                                <CheckCircle size={11} />
-                                Confirm
-                              </button>
-
-                              <button
-                                onClick={() => updateStatus(o.id, "cancelled")}
-                                disabled={updating === o.id}
-                                className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1"
-                              >
-                                <XCircle size={11} />
-                                Cancel
-                              </button>
-                            </>
-                          )}
-
-                          {canEdit && o.status === "confirmed" && (
-                            <button
-                              onClick={() => updateStatus(o.id, "processing")}
-                              disabled={updating === o.id}
-                              className="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors flex items-center gap-1"
-                            >
-                              <CheckCircle size={11} />
-                              Processing
-                            </button>
-                          )}
-
-                          {canEdit && o.status === "processing" && (
-                            <button
-                              onClick={() => updateStatus(o.id, "delivered")}
-                              disabled={updating === o.id}
-                              className="text-xs px-2 py-1 bg-green-50 text-[#1B4D2E] rounded-lg hover:bg-green-100 transition-colors flex items-center gap-1"
-                            >
-                              <CheckCircle size={11} />
-                              Delivered
-                            </button>
-                          )}
-
                           <button
                             onClick={() => openModal(o)}
                             className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1"
@@ -478,7 +423,7 @@ export default function AdminOrdersPage() {
                             View
                           </button>
 
-                          {o.customer_id && <LogFollowUpButton onClick={() => openFollowUp(o)} label="Log" />}
+                          {!isAccounts && o.customer_id && <LogFollowUpButton onClick={() => openFollowUp(o)} label="Log" />}
                         </div>
                       </td>
                     </tr>
@@ -712,36 +657,46 @@ export default function AdminOrdersPage() {
                 </div>
               )}
 
-              {modal.customer_id && (
+              {!isAccounts && modal.customer_id && (
                 <div className="flex justify-end">
                   <LogFollowUpButton onClick={() => openFollowUp(modal)} />
                 </div>
               )}
 
-              {canEdit && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                  Update Status
-                </h3>
-
-                <div className="flex flex-wrap gap-2">
-                  {["pending", "confirmed", "processing", "delivered", "cancelled"].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => updateStatus(modal.id, s)}
-                      disabled={modal.status === s || updating === modal.id}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-40 ${
-                        modal.status === s
-                          ? `${STATUS_COLORS[s]} opacity-100`
-                          : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Order status</h3>
+                  <OrderStatusControl
+                    orderId={modal.id}
+                    status={modal.status}
+                    role={role}
+                    notify={showToast}
+                    onChanged={(status) => applyChange(modal.id, { status })}
+                  />
+                </div>
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Payment</h3>
+                  <div className="flex flex-col gap-1.5">
+                    <span
+                      className={`w-fit text-xs font-medium px-2 py-1 rounded-full border ${
+                        PAYMENT_COLORS[modal.payment_status ?? "unpaid"] ?? PAYMENT_COLORS.unpaid
                       }`}
                     >
-                      {formatLabel(s)}
-                    </button>
-                  ))}
+                      {formatLabel(modal.payment_status ?? "unpaid")}
+                    </span>
+                    <PaymentStatusControl
+                      orderId={modal.id}
+                      paymentMethod={modal.payment_method}
+                      paymentStatus={modal.payment_status}
+                      role={role}
+                      notify={showToast}
+                      onChanged={(payment_status) => applyChange(modal.id, { payment_status })}
+                    />
+                  </div>
                 </div>
               </div>
-              )}
+
+              <OrderHistory orderId={modal.id} refreshKey={historyKey} />
             </div>
           </div>
         </div>

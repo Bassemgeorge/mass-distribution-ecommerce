@@ -19,7 +19,7 @@ import {
   PackageSearch,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { StaffInfo, StaffRoleProvider, canAccess } from "@/context/StaffRoleContext";
+import { STAFF_ROLES, StaffInfo, StaffRole, StaffRoleProvider, canAccess, homeFor, roleLabel } from "@/context/StaffRoleContext";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -86,7 +86,7 @@ export default function AdminLayoutClient({
         return;
       }
 
-      if (role !== "admin" && role !== "sales") {
+      if (!STAFF_ROLES.includes(role as StaffRole)) {
         // Not staff. Don't sign out: the session is shared across tabs and may be a customer's
         // (e.g. a password reset in another tab). Just leave the admin area.
         setStaff(null);
@@ -99,7 +99,8 @@ export default function AdminLayoutClient({
       if (cancelled || checkedUserId.current !== uid) return;
 
       setCheckFailed(false);
-      setStaff({ role, userId: user.id, name: staffRow?.name || user.email || (role === "admin" ? "Admin" : "Sales") });
+      const staffRole = role as StaffRole;
+      setStaff({ role: staffRole, userId: user.id, name: staffRow?.name || user.email || roleLabel(staffRole) });
       setAuthed(true);
     }
 
@@ -125,10 +126,11 @@ export default function AdminLayoutClient({
 
   const blocked = !isLogin && staff !== null && !canAccess(staff.role, pathname);
 
-  // Sales users opening an admin-only page by URL land on their work queue instead
+  // Sales/accounts users opening a page they can't use by URL land on their own start page instead
+  const staffRole = staff?.role ?? null;
   useEffect(() => {
-    if (blocked) router.replace("/admin/follow-ups");
-  }, [blocked, router]);
+    if (blocked && staffRole) router.replace(homeFor(staffRole));
+  }, [blocked, staffRole, router]);
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -217,10 +219,14 @@ export default function AdminLayoutClient({
           </span>
           <span
             className={`ml-auto flex-shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-              staff.role === "admin" ? "bg-[#3AE18B]/15 text-[#3AE18B]" : "bg-sky-400/15 text-sky-300"
+              staff.role === "admin"
+                ? "bg-[#3AE18B]/15 text-[#3AE18B]"
+                : staff.role === "accounts"
+                  ? "bg-amber-400/15 text-amber-300"
+                  : "bg-sky-400/15 text-sky-300"
             }`}
           >
-            {staff.role === "admin" ? "Admin" : "Sales"}
+            {roleLabel(staff.role)}
           </span>
         </div>
         <Link
